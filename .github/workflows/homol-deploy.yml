@@ -1,7 +1,4 @@
-name: 🚀 Déploiement HOMOL
-
-on:
-  pull_request:
+name: 🚀 Déploiement 'local-env'  pull_request:
     types: [closed]
     branches:
       - homol
@@ -29,5 +26,5 @@ jobs:
       ADRESSE_GLOBAL: ${{ vars.ADRESSE_GLOBAL }}         # Ex: www
       ADRESSE_LOCAL: ${{ vars.ADRESSE_LOCAL }}           # Ex: mon-site
       remote_env: 'homol'
-      PATH_ORDER: 'local-env'
+      PATH_ORDER: 'env-local'
       enable_mirror: false
