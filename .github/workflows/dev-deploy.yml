@@ -1,4 +1,4 @@
-# Exemple d'utilisation du workflow de déploiement DEV avec version
+'local-env'cal-env'xemple d'utilisation du workflow de déploiement DEV avec version
 # Ce workflow déploie automatiquement sur le serveur DEV après merge dans develop
 
 name: 🚀 Déploiement DEV
@@ -35,5 +35,5 @@ jobs:
       ADRESSE_GLOBAL: ${{ vars.ADRESSE_GLOBAL }}         # Ex: www
       ADRESSE_LOCAL: ${{ vars.ADRESSE_LOCAL }}           # Ex: mon-site
       remote_env: 'dev'
-      PATH_ORDER: 'local-env'
+      PATH_ORDER: 'env-local'
       enable_mirror: false
