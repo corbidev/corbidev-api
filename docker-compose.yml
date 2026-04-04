@@ -1,0 +1,38 @@
+services:
+# ##> BASE DE DONNÉES // ADMINER ET mariadb
+    adminer:
+        platform: linux/x86_64
+        container_name: adminer_${NAME}_${ADMINER_VERSION}
+        image: adminer:${ADMINER_VERSION}
+        restart: no
+        ports:
+            - ${ADMINER_LOCALHOST_PORT}:${ADMINER_DOCKER_PORT}
+        env_file:
+            - .env
+        depends_on:
+            - database
+
+###> doctrine/doctrine-bundle ###
+    database:
+        platform: linux/x86_64
+        container_name: mariadb_${NAME}_${MARIADB_VERSION}
+        image: mariadb:${MARIADB_VERSION}
+        restart: no
+        env_file:
+            - .env
+        volumes:
+            - ./${FOLDER_DATASQL}:/docker-entrypoint-initdb.d/
+            - ./${FOLDER_DATABASE}:/var/lib/mysql:rw
+        ports:
+            - ${SQL_LOCALHOST_PORT}:${SQL_DOCKER_PORT}
+###< doctrine/doctrine-bundle ###
+# ##< BASE DE DONNÉES // ADMINER ET mariadb
+
+
+volumes:
+###> doctrine/doctrine-bundle ###
+    database:
+###< doctrine/doctrine-bundle ###
+networks:
+    dev:
+        driver: bridge

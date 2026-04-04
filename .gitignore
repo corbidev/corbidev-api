@@ -1,0 +1,13 @@
+/.env
+/.env.*
+!.env.example
+/config/secrets/prod/prod.decrypt.private.php
+/public/bundles/
+/var/
+/vendor/
+###< symfony/framework-bundle ###
+/.vscode/sftp*
+/.docker/database/mariadb
+deploy
+database/*
+!database/sql/
