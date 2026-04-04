@@ -1,0 +1,7 @@
+.git
+.github
+.rsync-ignore
+.vscode
+vendor
+database
+.env
