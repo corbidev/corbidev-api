@@ -1,0 +1,58 @@
+{
+  "info": {
+    "_postman_id": "13df03ee-0c95-4cc3-8a11-2f132e8d6f63",
+    "name": "Corbidev API - Logs",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Create Log",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          },
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message\": \"Erreur sur endpoint /api/users\",\n  \"title\": \"API Error\",\n  \"level\": \"error\",\n  \"env\": \"dev\",\n  \"httpStatus\": 500,\n  \"durationMs\": 231,\n  \"fingerprint\": \"b6b8fce4e5237f8dca8f8f9164de74f35f3f4f5ff24a5ce2f9ecf3f2d7d49d11\",\n  \"context\": {\n    \"method\": \"GET\",\n    \"traceId\": \"trace-12345\",\n    \"userId\": 42\n  },\n  \"routeUrl\": \"/api/users\",\n  \"routeUri\": \"/api/users\",\n  \"tags\": [\"backend\", \"exception\"]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/logs",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "logs"
+          ]
+        },
+        "description": "Enregistre un log via l'API. sourceApiKey peut être fourni dans le body ou via l'en-tête x-api-key."
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000"
+    },
+    {
+      "key": "apiKey",
+      "value": "replace-with-valid-source-api-key"
+    }
+  ]
+}
