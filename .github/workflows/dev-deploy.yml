@@ -1,4 +1,3 @@
-'local-env'cal-env'xemple d'utilisation du workflow de déploiement DEV avec version
 # Ce workflow déploie automatiquement sur le serveur DEV après merge dans develop
 
 name: 🚀 Déploiement DEV
