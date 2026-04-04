@@ -1,4 +1,4 @@
-'local-env'al-env': 🚀 Déploiement PROD
+name: 🚀 Déploiement PROD
 
 on:
   pull_request:
@@ -29,5 +29,4 @@ jobs:
       ADRESSE_GLOBAL: ${{ vars.ADRESSE_GLOBAL }}         # Ex: www
       ADRESSE_LOCAL: ${{ vars.ADRESSE_LOCAL }}           # Ex: mon-site
       remote_env: 'prod'
-      PATH_ORDER: 'env-local'
       enable_mirror: false

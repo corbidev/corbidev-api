@@ -34,5 +34,4 @@ jobs:
       ADRESSE_GLOBAL: ${{ vars.ADRESSE_GLOBAL }}         # Ex: www
       ADRESSE_LOCAL: ${{ vars.ADRESSE_LOCAL }}           # Ex: mon-site
       remote_env: 'dev'
-      PATH_ORDER: 'env-local'
       enable_mirror: false
