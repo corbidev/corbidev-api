@@ -18,7 +18,7 @@ final class AccessTokenResolver implements AccessTokenResolverInterface
 
     public function verifyRequest(Request $request): AccessTokenContext
     {
-        $authorization = $request->headers->get(RessAuthConstants::AUTHORIZATION_HEADER);
+        $authorization = $this->extractAuthorizationHeader($request);
         if (!is_string($authorization) || trim($authorization) === '') {
             return new AccessTokenContext(null, null);
         }
@@ -35,7 +35,7 @@ final class AccessTokenResolver implements AccessTokenResolverInterface
         try {
             $payload = $this->jwtTokenManager->parse($jwt);
         } catch (JWTDecodeFailureException) {
-            throw new InvalidArgumentException(RessAuthConstants::ERROR_INVALID_OR_EXPIRED_JWT);
+            throw new InvalidAccessTokenException(RessAuthConstants::ERROR_INVALID_OR_EXPIRED_JWT);
         }
 
         $sourceApiKey = null;
@@ -80,5 +80,37 @@ final class AccessTokenResolver implements AccessTokenResolverInterface
         $context = $this->verifyRequest($request);
 
         return $context->sourceApiKey;
+    }
+
+    private function extractAuthorizationHeader(Request $request): ?string
+    {
+        $authorization = $request->headers->get(RessAuthConstants::AUTHORIZATION_HEADER);
+        if (is_string($authorization) && trim($authorization) !== '') {
+            return $authorization;
+        }
+
+        if (function_exists('getallheaders')) {
+            $headers = getallheaders();
+            if (is_array($headers)) {
+                foreach ($headers as $headerName => $headerValue) {
+                    if (!is_string($headerName) || !is_string($headerValue)) {
+                        continue;
+                    }
+
+                    if (strcasecmp($headerName, RessAuthConstants::AUTHORIZATION_HEADER) === 0 && trim($headerValue) !== '') {
+                        return $headerValue;
+                    }
+                }
+            }
+        }
+
+        foreach (RessAuthConstants::AUTHORIZATION_SERVER_KEYS as $serverKey) {
+            $serverValue = $request->server->get($serverKey);
+            if (is_string($serverValue) && trim($serverValue) !== '') {
+                return $serverValue;
+            }
+        }
+
+        return null;
     }
 }

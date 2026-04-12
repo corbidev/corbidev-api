@@ -76,64 +76,11 @@
       "response": []
     },
     {
-      "name": "Auth - Create Log Token (400 missing clientSecret)",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "type": "text/javascript",
-            "exec": [
-              "pm.test('Status code is 400 when clientSecret is missing', function () {",
-              "  pm.response.to.have.status(400);",
-              "});",
-              "",
-              "pm.test('Error message indicates missing clientSecret', function () {",
-              "  const body = pm.response.json();",
-              "  pm.expect(body).to.have.property('error').that.is.a('string');",
-              "  pm.expect(body.error).to.include('clientSecret');",
-              "});"
-            ]
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"sourceApiKey\": \"{{sourceApiKey}}\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        },
-        "url": {
-          "raw": "{{baseUrl}}/api/auth/token",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "auth",
-            "token"
-          ]
-        }
-      },
-      "response": []
-    },
-    {
       "name": "Logs - Create (201 with Bearer)",
       "event": [
         {
           "listen": "test",
           "script": {
-            "type": "text/javascript",
             "exec": [
               "pm.test('Status code is 201', function () {",
               "  pm.response.to.have.status(201);",
@@ -144,7 +91,67 @@
               "  pm.expect(body).to.have.property('id');",
               "  pm.expect(body).to.have.property('status', 'created');",
               "});"
-            ]
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwtToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"message\": \"Erreur sur endpoint /auth/users\",\n    \"url\": \"https://corbisier.test\",\n    \"uri\": \"/auth/users\",\n    \"title\": \"API Error\",\n    \"level\": \"error\",\n    \"env\": \"dev\",\n    \"httpStatus\": 500,\n    \"durationMs\": 231,\n    \"context\": {\n      \"method\": \"GET\",\n      \"traceId\": \"trace-12345\",\n      \"userId\": 42\n    },\n    \"tags\": [\"backend\", \"exception\"]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/logs",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "logs"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Logs - Create (400 with Bearer et ApiKey dans body)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 400', function () {",
+              "  pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('Log entry created response shape', function () {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body).to.have.property('id');",
+              "  pm.expect(body).to.have.property('status', 'created');",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
           }
         }
       ],
@@ -188,7 +195,6 @@
         {
           "listen": "test",
           "script": {
-            "type": "text/javascript",
             "exec": [
               "pm.test('Status code is 400 when message is missing', function () {",
               "  pm.response.to.have.status(400);",
@@ -199,7 +205,10 @@
               "  pm.expect(body).to.have.property('error').that.is.a('string');",
               "  pm.expect(body.error).to.include('message');",
               "});"
-            ]
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
           }
         }
       ],
@@ -217,7 +226,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"url\": \"https://api.corbisier.test/api/test\",\n  \"uri\": \"/api/test\",\n  \"level\": \"info\",\n  \"env\": \"dev\"\n}",
+          "raw": "{\n    \"url\": \"https://corbisier.test\",\n    \"uri\": \"/auth/users\",\n    \"sourceApiKey\": \"{{sourceApiKey}}\",\n    \"title\": \"API Error\",\n    \"level\": \"error\",\n    \"env\": \"dev\",\n    \"httpStatus\": 500,\n    \"durationMs\": 231,\n    \"context\": {\n      \"method\": \"GET\",\n      \"traceId\": \"trace-12345\",\n      \"userId\": 42\n    },\n    \"tags\": [\"backend\", \"exception\"]\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -355,7 +364,6 @@
         {
           "listen": "test",
           "script": {
-            "type": "text/javascript",
             "exec": [
               "pm.test('Status code is 400 when url path conflicts with uri', function () {",
               "  pm.response.to.have.status(400);",
@@ -366,7 +374,10 @@
               "  pm.expect(body).to.have.property('error').that.is.a('string');",
               "  pm.expect(body.error.toLowerCase()).to.include('uri');",
               "});"
-            ]
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
           }
         }
       ],
@@ -384,7 +395,182 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"message\": \"URL URI mismatch test\",\n  \"url\": \"https://api.corbisier.test/api/test\",\n  \"uri\": \"/auth/login\",\n  \"level\": \"info\",\n  \"env\": \"dev\"\n}",
+          "raw": "{\n  \"message\": \"URL URI mismatch test\",\n  \"url\": \"https://api.corbisier.test/api/test\",\n  \"uri\": \"/auth/login\",\n    \"sourceApiKey\": \"{{sourceApiKey}}\",\n    \"title\": \"API Error\",\n    \"level\": \"error\",\n    \"env\": \"dev\",\n    \"httpStatus\": 500,\n    \"durationMs\": 231,\n    \"context\": {\n      \"method\": \"GET\",\n      \"traceId\": \"trace-12345\",\n      \"userId\": 42\n    },\n    \"tags\": [\"backend\", \"exception\"]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/logs",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "logs"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Logs - Create (403 invalid bearer)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 403 when bearer token is invalid', function () {",
+              "  pm.response.to.have.status(403);",
+              "});",
+              "",
+              "pm.test('Error indicates invalid or expired JWT', function () {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body).to.have.property('error').that.is.a('string');",
+              "  pm.expect(body.error.toLowerCase()).to.satisfy(function (message) {",
+              "    return message.includes('jwt') || message.includes('token');",
+              "  });",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer invalid.jwt.token"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"message\": \"Erreur sur endpoint /auth/users\",\n    \"url\": \"https://corbisier.test\",\n    \"uri\": \"/auth/users\",\n    \"sourceApiKey\": \"{{sourceApiKey}}\",\n    \"title\": \"API Error\",\n    \"level\": \"error\",\n    \"env\": \"dev\",\n    \"httpStatus\": 500,\n    \"durationMs\": 231,\n    \"context\": {\n      \"method\": \"GET\",\n      \"traceId\": \"trace-12345\",\n      \"userId\": 42\n    },\n    \"tags\": [\"backend\", \"exception\"]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/logs",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "logs"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Logs - Create (403 invalid bearer)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 403 when bearer token is invalid', function () {",
+              "  pm.response.to.have.status(403);",
+              "});",
+              "",
+              "pm.test('Error indicates invalid or expired JWT', function () {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body).to.have.property('error').that.is.a('string');",
+              "  pm.expect(body.error.toLowerCase()).to.satisfy(function (message) {",
+              "    return message.includes('jwt') || message.includes('token');",
+              "  });",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer invalid.jwt.token"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"message\": \"Erreur sur endpoint /auth/users\",\n    \"url\": \"https://corbisier.test\",\n    \"uri\": \"/auth/users\",\n    \"sourceApiKey\": \"{{sourceApiKey}}\",\n    \"title\": \"API Error\",\n    \"level\": \"error\",\n    \"env\": \"dev\",\n    \"httpStatus\": 500,\n    \"durationMs\": 231,\n    \"context\": {\n      \"method\": \"GET\",\n      \"traceId\": \"trace-12345\",\n      \"userId\": 42\n    },\n    \"tags\": [\"backend\", \"exception\"]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/logs",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "logs"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Logs - Create (400 missing url)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 400 when url is missing', function () {",
+              "  pm.response.to.have.status(400);",
+              "});",
+              "",
+              "pm.test('Error mentions url field', function () {",
+              "  const body = pm.response.json();",
+              "  pm.expect(body).to.have.property('error').that.is.a('string');",
+              "  pm.expect(body.error).to.include('url');",
+              "});"
+            ],
+            "type": "text/javascript",
+            "packages": {},
+            "requests": {}
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{jwtToken}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n{\n    \"message\": \"Erreur sur endpoint /auth/users\",\n    \"uri\": \"/auth/users\",\n    \"sourceApiKey\": \"{{sourceApiKey}}\",\n    \"title\": \"API Error\",\n    \"level\": \"error\",\n    \"env\": \"dev\",\n    \"httpStatus\": 500,\n    \"durationMs\": 231,\n    \"context\": {\n      \"method\": \"GET\",\n      \"traceId\": \"trace-12345\",\n      \"userId\": 42\n    },\n    \"tags\": [\"backend\", \"exception\"]\n}\n}",
           "options": {
             "raw": {
               "language": "json"

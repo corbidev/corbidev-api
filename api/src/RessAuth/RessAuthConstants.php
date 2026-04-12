@@ -7,6 +7,7 @@ final class RessAuthConstants
     public const TOKEN_TYPE_BEARER = 'Bearer';
     public const AUTHORIZATION_HEADER = 'Authorization';
     public const BEARER_TOKEN_PATTERN = '/^Bearer\s+(.+)$/i';
+    public const AUTHORIZATION_SERVER_KEYS = ['HTTP_AUTHORIZATION', 'REDIRECT_HTTP_AUTHORIZATION'];
 
     public const TOKEN_PATH = '/api/auth/token';
     public const TOKEN_ROUTE = 'api_auth_token_create';

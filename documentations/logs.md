@@ -76,7 +76,8 @@ Réponse succès (`201 Created`) :
   - `api_key`
 - Si le header `Authorization` est absent, la requête est rejetée en `400`.
 - Si le header `Authorization` est présent mais pas au format Bearer, la requête est rejetée en `400`.
-- Les champs `sourceApiKey` et `sourceId` sont interdits dans le body de `POST /api/logs` et provoquent une erreur `400`.
+- Si le Bearer JWT est invalide ou expiré, la requête est rejetée en `403`.
+- Les champs `sourceApiKey` et `sourceId` sont interdits dans le body de `POST /api/logs` : la source est deja deduite du Bearer JWT. S'ils sont envoyes, la requete est rejetee en `400`.
 
 ### Payload JSON
 
@@ -143,11 +144,15 @@ Réponse succès (`201 Created`) :
 - `400 Bad Request` si :
   - JSON invalide,
   - body non objet JSON,
-  - header `Authorization` absent ou invalide,
+  - header `Authorization` absent,
+  - header `Authorization` present mais mal forme,
   - `sourceApiKey` ou `sourceId` présents dans le body,
   - champ obligatoire manquant,
   - référence métier introuvable (source/level/env/url/uri/tag id),
   - données invalides.
+
+- `403 Forbidden` si :
+  - Bearer JWT invalide ou expire.
 
 Exemple :
 

@@ -36,7 +36,7 @@ final class RessLogsConstants
 
     public const ERROR_JSON_INVALID = 'JSON invalide.';
     public const ERROR_JSON_OBJECT_REQUIRED = 'Le corps de la requête doit être un objet JSON.';
-    public const ERROR_SOURCE_FIELDS_FORBIDDEN = 'Les champs "sourceApiKey" et "sourceId" ne sont pas acceptés dans le body. Utilisez le header Authorization avec un Bearer JWT valide.';
+    public const ERROR_SOURCE_FIELDS_FORBIDDEN = 'Le Bearer JWT a bien ete pris en compte et identifie deja la source. Retirez "sourceApiKey" et "sourceId" du body et conservez uniquement le header Authorization.';
     public const ERROR_MESSAGE_REQUIRED = 'Le champ «message» est obligatoire.';
     public const ERROR_URL_REQUIRED = 'Le champ «url» est obligatoire.';
     public const ERROR_URL_INVALID = 'Le champ «url» doit être une URL valide (http/https).';

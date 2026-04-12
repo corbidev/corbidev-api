@@ -35,7 +35,7 @@ Responsabilites :
 - decode le corps JSON ;
 - rejette les payloads invalides ou non objets ;
 - exige `Authorization: Bearer ...` et resolve la source depuis le JWT ;
-- rejette `sourceApiKey` et `sourceId` s'ils sont presents dans le body JSON ;
+- rejette `sourceApiKey` et `sourceId` s'ils sont presents dans le body JSON, car la source est deja resolue via le Bearer JWT ;
 - delegue la transformation du payload au mapper ;
 - delegue l'enregistrement metier au service `LogRecorderInterface` ;
 - retourne une reponse JSON `201` en cas de succes ou `400` en cas d'erreur fonctionnelle.

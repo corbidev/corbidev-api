@@ -2,6 +2,7 @@
 
 namespace App\RessLogs\Controller;
 
+use App\RessAuth\Security\InvalidAccessTokenException;
 use App\RessAuth\Security\AccessTokenResolverInterface;
 use App\RessLogs\Mapper\CreateLogRequestMapperInterface;
 use App\RessLogs\RessLogsConstants;
@@ -38,14 +39,15 @@ final class CreateLogController
             ], JsonResponse::HTTP_BAD_REQUEST);
         }
 
-        if (array_key_exists(RessLogsConstants::FIELD_SOURCE_API_KEY, $payload) || array_key_exists(RessLogsConstants::FIELD_SOURCE_ID, $payload)) {
-            return new JsonResponse([
-                RessLogsConstants::RESPONSE_KEY_ERROR => RessLogsConstants::ERROR_SOURCE_FIELDS_FORBIDDEN,
-            ], JsonResponse::HTTP_BAD_REQUEST);
-        }
-
         try {
             $accessTokenContext = $this->accessTokenResolver->requireRequest($request);
+
+            if (array_key_exists(RessLogsConstants::FIELD_SOURCE_API_KEY, $payload) || array_key_exists(RessLogsConstants::FIELD_SOURCE_ID, $payload)) {
+                return new JsonResponse([
+                    RessLogsConstants::RESPONSE_KEY_ERROR => RessLogsConstants::ERROR_SOURCE_FIELDS_FORBIDDEN,
+                ], JsonResponse::HTTP_BAD_REQUEST);
+            }
+
             $apiKey = $accessTokenContext->sourceApiKey;
 
             $requestDto = $this->createLogRequestMapper->map(
@@ -54,6 +56,10 @@ final class CreateLogController
                 is_int($accessTokenContext->sourceId) ? $accessTokenContext->sourceId : null,
             );
             $entry = $this->logRecorder->record($requestDto);
+        } catch (InvalidAccessTokenException $exception) {
+            return new JsonResponse([
+                RessLogsConstants::RESPONSE_KEY_ERROR => $exception->getMessage(),
+            ], JsonResponse::HTTP_FORBIDDEN);
         } catch (InvalidArgumentException $exception) {
             return new JsonResponse([
                 RessLogsConstants::RESPONSE_KEY_ERROR => $exception->getMessage(),
