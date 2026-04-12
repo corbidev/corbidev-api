@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Entity\Log;
+namespace App\RessLogs\Entity;
 
-use App\Repository\Log\LogEntryTagRepository;
+use App\RessLogs\Repository\LogEntryTagRepository;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: LogEntryTagRepository::class)]

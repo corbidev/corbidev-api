@@ -5,8 +5,8 @@
 Le module de logs permet d'enregistrer des événements applicatifs dans l'API via un endpoint HTTP unique.
 
 - Endpoint : `POST /api/logs`
-- Contrôleur : `App\Controller\Log\CreateLogController`
-- Service métier : `App\Service\Log\LogRecorder`
+- Contrôleur : `App\RessLogs\Controller\CreateLogController`
+- Service métier : `App\RessLogs\Service\LogRecorder`
 
 ## Fonctionnement global
 
@@ -16,7 +16,7 @@ Le module de logs permet d'enregistrer des événements applicatifs dans l'API v
    - l'en-tête `x-api-key`, ou
    - l'en-tête `Authorization: Bearer <token>`.
 3. Le service `LogRecorder` valide et enrichit les données.
-4. Le log est persisté en base (`log_entry`) avec ses relations (`log_level`, `log_env`, `log_source`, `log_route`, `log_tag`, `log_entry_tag`).
+4. Le log est persisté en base (`log_entry`) avec ses relations (`log_level`, `log_env`, `log_source`, `log_url`, `log_uri`, `log_tag`, `log_entry_tag`).
 
 ## Endpoint
 
@@ -33,12 +33,12 @@ Le module de logs permet d'enregistrer des événements applicatifs dans l'API v
 #### Obligatoire
 
 - `message` (string)
+- `url` (string) — URL absolue valide (`http://...` ou `https://...`)
 - `sourceId` (int) **ou** `sourceApiKey` (string)
 
 #### Optionnel
 
 - `title` (string|null)
-- `url` (string|null) — auto-rempli avec l'URL de la requête si absent
 - `httpStatus` (int|null)
 - `durationMs` (int|null)
 - `fingerprint` (string|null)
@@ -47,7 +47,10 @@ Le module de logs permet d'enregistrer des événements applicatifs dans l'API v
 - `createdAt` (string datetime ISO8601 ou `DateTimeImmutable`)
 - `level` (int|string) — défaut: `200` (`info`)
 - `env` (int|string) — défaut: `1` (`dev`)
+- `urlId` (int)
+- `uriId` (int)
 - `routeId` (int)
+- `uri` (string)
 - `routeUrl` (string)
 - `routeUri` (string)
 - `tags` (array d'IDs ou de noms)
@@ -59,11 +62,14 @@ Le module de logs permet d'enregistrer des événements applicatifs dans l'API v
 - `source` :
   - priorité à `sourceId`, sinon `sourceApiKey` (source active).
   - erreur si introuvable.
-- `route` :
-  - si `routeId` fourni, doit exister.
-  - `routeUrl` et `routeUri` sont tous les deux acceptés.
-  - si les deux sont fournis, ils doivent avoir la même valeur.
-  - sinon la valeur fournie crée la route si elle n'existe pas.
+- `url/uri` :
+  - `url` est obligatoire et doit etre une URL absolue valide (`http` ou `https`).
+  - `uriId` (ou `routeId` pour compatibilite) pointe vers une URI existante.
+  - `urlId` pointe vers une URL existante.
+  - `uri`/`routeUri` permet de rechercher ou creer une URI.
+  - `url`/`routeUrl` permet de rechercher ou creer une URL.
+  - une URI peut etre rattachee a une URL.
+  - si plus aucune `log_entry` ne reference une URI/URL, elle est supprimee automatiquement.
 - `tags` :
   - accepte id ou nom,
   - crée les tags manquants par nom,
@@ -89,7 +95,7 @@ Le module de logs permet d'enregistrer des événements applicatifs dans l'API v
   - JSON invalide,
   - body non objet JSON,
   - champ obligatoire manquant,
-  - référence métier introuvable (source/level/env/route/tag id),
+  - référence métier introuvable (source/level/env/url/uri/tag id),
   - données invalides.
 
 Exemple :
@@ -108,6 +114,7 @@ curl -X POST "http://127.0.0.1:8000/api/logs" \
   -H "x-api-key: replace-with-valid-source-api-key" \
   -d '{
     "message": "Erreur sur endpoint /api/users",
+    "url": "https://api.corbisier.test/api/users",
     "title": "API Error",
     "level": "error",
     "env": "dev",

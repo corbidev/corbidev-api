@@ -39,9 +39,17 @@ CREATE TABLE log_source (
 
 -- -----------------------------------------
 
-CREATE TABLE log_route (
+CREATE TABLE log_url (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    uri VARCHAR(255) NOT NULL UNIQUE
+    url VARCHAR(768) NOT NULL UNIQUE
+) ENGINE=InnoDB;
+
+CREATE TABLE log_uri (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    url_id BIGINT NOT NULL,
+    uri VARCHAR(255) NOT NULL UNIQUE,
+    INDEX idx_log_uri_url_id (url_id),
+    CONSTRAINT fk_log_uri_url FOREIGN KEY (url_id) REFERENCES log_url(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
 -- -----------------------------------------
@@ -64,8 +72,8 @@ CREATE TABLE log_entry (
     source_id BIGINT NOT NULL,
     env_id SMALLINT NOT NULL,
 
-    route_id BIGINT NULL,
-    url TEXT NULL,
+    url_id BIGINT NULL,
+    uri_id BIGINT NULL,
 
     title VARCHAR(255) NULL,
     message TEXT NOT NULL,
@@ -85,12 +93,15 @@ CREATE TABLE log_entry (
     INDEX idx_source (source_id),
     INDEX idx_env (env_id),
     INDEX idx_fingerprint (fingerprint),
+    INDEX idx_url_id (url_id),
+    INDEX idx_uri_id (uri_id),
 
     -- FOREIGN KEYS
     CONSTRAINT fk_log_level FOREIGN KEY (level_id) REFERENCES log_level(id),
     CONSTRAINT fk_log_source FOREIGN KEY (source_id) REFERENCES log_source(id),
     CONSTRAINT fk_log_env FOREIGN KEY (env_id) REFERENCES log_env(id),
-    CONSTRAINT fk_log_route FOREIGN KEY (route_id) REFERENCES log_route(id)
+    CONSTRAINT fk_log_url FOREIGN KEY (url_id) REFERENCES log_url(id),
+    CONSTRAINT fk_log_uri FOREIGN KEY (uri_id) REFERENCES log_uri(id)
 
 ) ENGINE=InnoDB;
 

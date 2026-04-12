@@ -1,0 +1,9 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "docker exec": true,
+        "/^php bin/console doctrine:migrations:migrate --no-interaction ; php bin/console doctrine:migrations:status --no-interaction$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
