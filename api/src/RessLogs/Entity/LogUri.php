@@ -2,15 +2,14 @@
 
 namespace App\RessLogs\Entity;
 
-use App\RessLogs\Entity\LogEntry;
-use App\RessLogs\Repository\LogRouteRepository;
+use App\RessLogs\Repository\LogUriRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity(repositoryClass: LogRouteRepository::class)]
-#[ORM\Table(name: 'log_route')]
-class LogRoute
+#[ORM\Entity(repositoryClass: LogUriRepository::class)]
+#[ORM\Table(name: 'log_uri')]
+class LogUri
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -20,10 +19,14 @@ class LogRoute
     #[ORM\Column(length: 255, unique: true)]
     private ?string $uri = null;
 
+    #[ORM\ManyToOne(inversedBy: 'uris')]
+    #[ORM\JoinColumn(name: 'url_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
+    private ?LogUrl $url = null;
+
     /**
      * @var Collection<int, LogEntry>
      */
-    #[ORM\OneToMany(mappedBy: 'route', targetEntity: LogEntry::class)]
+    #[ORM\OneToMany(mappedBy: 'uri', targetEntity: LogEntry::class)]
     private Collection $entries;
 
     public function __construct()
@@ -48,30 +51,23 @@ class LogRoute
         return $this;
     }
 
+    public function getUrl(): ?LogUrl
+    {
+        return $this->url;
+    }
+
+    public function setUrl(?LogUrl $url): static
+    {
+        $this->url = $url;
+
+        return $this;
+    }
+
     /**
      * @return Collection<int, LogEntry>
      */
     public function getEntries(): Collection
     {
         return $this->entries;
-    }
-
-    public function addEntry(LogEntry $entry): static
-    {
-        if (!$this->entries->contains($entry)) {
-            $this->entries->add($entry);
-            $entry->setRoute($this);
-        }
-
-        return $this;
-    }
-
-    public function removeEntry(LogEntry $entry): static
-    {
-        if ($this->entries->removeElement($entry) && $entry->getRoute() === $this) {
-            $entry->setRoute(null);
-        }
-
-        return $this;
     }
 }

@@ -2,6 +2,8 @@
 
 namespace App\RessLogs\Entity;
 
+use App\RessLogs\Entity\LogUri;
+use App\RessLogs\Entity\LogUrl;
 use App\RessLogs\Repository\LogEntryRepository;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -41,11 +43,12 @@ class LogEntry
     private ?LogEnv $env = null;
 
     #[ORM\ManyToOne(inversedBy: 'entries')]
-    #[ORM\JoinColumn(name: 'route_id', referencedColumnName: 'id', nullable: true)]
-    private ?LogRoute $route = null;
+    #[ORM\JoinColumn(name: 'url_id', referencedColumnName: 'id', nullable: true)]
+    private ?LogUrl $url = null;
 
-    #[ORM\Column(type: 'text', nullable: true)]
-    private ?string $url = null;
+    #[ORM\ManyToOne(inversedBy: 'entries')]
+    #[ORM\JoinColumn(name: 'uri_id', referencedColumnName: 'id', nullable: true)]
+    private ?LogUri $uri = null;
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $title = null;
@@ -132,26 +135,26 @@ class LogEntry
         return $this;
     }
 
-    public function getRoute(): ?LogRoute
-    {
-        return $this->route;
-    }
-
-    public function setRoute(?LogRoute $route): static
-    {
-        $this->route = $route;
-
-        return $this;
-    }
-
-    public function getUrl(): ?string
+    public function getUrl(): ?LogUrl
     {
         return $this->url;
     }
 
-    public function setUrl(?string $url): static
+    public function setUrl(?LogUrl $url): static
     {
         $this->url = $url;
+
+        return $this;
+    }
+
+    public function getUri(): ?LogUri
+    {
+        return $this->uri;
+    }
+
+    public function setUri(?LogUri $uri): static
+    {
+        $this->uri = $uri;
 
         return $this;
     }

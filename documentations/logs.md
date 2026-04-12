@@ -5,8 +5,8 @@
 Le module de logs permet d'enregistrer des événements applicatifs dans l'API via un endpoint HTTP unique.
 
 - Endpoint : `POST /api/logs`
-- Contrôleur : `App\Controller\Log\CreateLogController`
-- Service métier : `App\Service\LogRecorder`
+- Contrôleur : `App\RessLogs\Controller\CreateLogController`
+- Service métier : `App\RessLogs\Service\LogRecorder`
 
 ## Fonctionnement global
 
@@ -16,7 +16,7 @@ Le module de logs permet d'enregistrer des événements applicatifs dans l'API v
    - l'en-tête `x-api-key`, ou
    - l'en-tête `Authorization: Bearer <token>`.
 3. Le service `LogRecorder` valide et enrichit les données.
-4. Le log est persisté en base (`log_entry`) avec ses relations (`log_level`, `log_env`, `log_source`, `log_route`, `log_tag`, `log_entry_tag`).
+4. Le log est persisté en base (`log_entry`) avec ses relations (`log_level`, `log_env`, `log_source`, `log_url`, `log_uri`, `log_tag`, `log_entry_tag`).
 
 ## Endpoint
 
@@ -47,7 +47,10 @@ Le module de logs permet d'enregistrer des événements applicatifs dans l'API v
 - `createdAt` (string datetime ISO8601 ou `DateTimeImmutable`)
 - `level` (int|string) — défaut: `200` (`info`)
 - `env` (int|string) — défaut: `1` (`dev`)
+- `urlId` (int)
+- `uriId` (int)
 - `routeId` (int)
+- `uri` (string)
 - `routeUrl` (string)
 - `routeUri` (string)
 - `tags` (array d'IDs ou de noms)
@@ -59,11 +62,13 @@ Le module de logs permet d'enregistrer des événements applicatifs dans l'API v
 - `source` :
   - priorité à `sourceId`, sinon `sourceApiKey` (source active).
   - erreur si introuvable.
-- `route` :
-  - si `routeId` fourni, doit exister.
-  - `routeUri` sert a resoudre la route (recherche puis creation si inexistante).
-  - si `routeUri` est absent et `routeId` absent, aucune route n'est liee.
-  - `routeUrl` est informatif et independant de `routeUri`.
+- `url/uri` :
+  - `uriId` (ou `routeId` pour compatibilite) pointe vers une URI existante.
+  - `urlId` pointe vers une URL existante.
+  - `uri`/`routeUri` permet de rechercher ou creer une URI.
+  - `url`/`routeUrl` permet de rechercher ou creer une URL.
+  - une URI peut etre rattachee a une URL.
+  - si plus aucune `log_entry` ne reference une URI/URL, elle est supprimee automatiquement.
 - `tags` :
   - accepte id ou nom,
   - crée les tags manquants par nom,
@@ -89,7 +94,7 @@ Le module de logs permet d'enregistrer des événements applicatifs dans l'API v
   - JSON invalide,
   - body non objet JSON,
   - champ obligatoire manquant,
-  - référence métier introuvable (source/level/env/route/tag id),
+  - référence métier introuvable (source/level/env/url/uri/tag id),
   - données invalides.
 
 Exemple :

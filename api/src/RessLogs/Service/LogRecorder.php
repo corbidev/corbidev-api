@@ -6,14 +6,16 @@ use App\RessLogs\Entity\LogEntry;
 use App\RessLogs\Entity\LogEntryTag;
 use App\RessLogs\Entity\LogEnv;
 use App\RessLogs\Entity\LogLevel;
-use App\RessLogs\Entity\LogRoute;
 use App\RessLogs\Entity\LogSource;
 use App\RessLogs\Entity\LogTag;
+use App\RessLogs\Entity\LogUri;
+use App\RessLogs\Entity\LogUrl;
 use App\RessLogs\Repository\LogEnvRepository;
 use App\RessLogs\Repository\LogLevelRepository;
-use App\RessLogs\Repository\LogRouteRepository;
 use App\RessLogs\Repository\LogSourceRepository;
 use App\RessLogs\Repository\LogTagRepository;
+use App\RessLogs\Repository\LogUriRepository;
+use App\RessLogs\Repository\LogUrlRepository;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use InvalidArgumentException;
@@ -25,7 +27,8 @@ class LogRecorder
         private readonly LogLevelRepository $logLevelRepository,
         private readonly LogEnvRepository $logEnvRepository,
         private readonly LogSourceRepository $logSourceRepository,
-        private readonly LogRouteRepository $logRouteRepository,
+        private readonly LogUriRepository $logUriRepository,
+        private readonly LogUrlRepository $logUrlRepository,
         private readonly LogTagRepository $logTagRepository,
     ) {
     }
@@ -45,9 +48,13 @@ class LogRecorder
      *     env?: int|string|null,
      *     sourceId?: int|null,
      *     sourceApiKey?: string|null,
+     *     urlId?: int|null,
+     *     uriId?: int|null,
      *     routeId?: int|null,
-    *     routeUrl?: string|null,
+     *     url?: string|null,
+     *     routeUrl?: string|null,
      *     routeUri?: string|null,
+     *     uri?: string|null,
      *     tags?: array<int|string>|null
      * } $payload
      */
@@ -61,23 +68,20 @@ class LogRecorder
         $level = $this->resolveLevel($payload['level'] ?? null);
         $env = $this->resolveEnv($payload['env'] ?? null);
         $source = $this->resolveSource($payload);
-        $route = $this->resolveRoute($payload);
+        [$url, $uri] = $this->resolveUrlAndUri($payload);
 
         $entry = new LogEntry();
         $entry->setMessage($message);
         $entry->setLevel($level);
         $entry->setEnv($env);
         $entry->setSource($source);
-        $entry->setRoute($route);
+        $entry->setUrl($url);
+        $entry->setUri($uri);
         $entry->setTs($this->toDateTimeImmutable($payload['ts'] ?? null) ?? new DateTimeImmutable());
         $entry->setCreatedAt($this->toDateTimeImmutable($payload['createdAt'] ?? null) ?? new DateTimeImmutable());
 
         if (array_key_exists('title', $payload)) {
             $entry->setTitle($this->nullableString($payload['title']));
-        }
-
-        if (array_key_exists('url', $payload)) {
-            $entry->setUrl($this->nullableString($payload['url']));
         }
 
         if (array_key_exists('httpStatus', $payload)) {
@@ -100,6 +104,7 @@ class LogRecorder
 
         $this->entityManager->persist($entry);
         $this->entityManager->flush();
+        $this->deleteOrphanUrisAndUrls();
 
         return $entry;
     }
@@ -166,34 +171,167 @@ class LogRecorder
     /**
      * @param array<string, mixed> $payload
      */
-    private function resolveRoute(array $payload): ?LogRoute
+    private function resolveUrlAndUri(array $payload): array
     {
-        $routeId = $payload['routeId'] ?? null;
-        $routeUri = $this->nullableString($payload['routeUri'] ?? null);
+        $urlId = $payload['urlId'] ?? null;
+        $uriId = $payload['uriId'] ?? $payload['routeId'] ?? null;
 
-        if ($routeId !== null) {
-            $route = $this->logRouteRepository->find((int) $routeId);
-            if (!$route instanceof LogRoute) {
-                throw new InvalidArgumentException(sprintf('Route introuvable pour l\'id %s.', (string) $routeId));
-            }
-
-            return $route;
+        $urlValue = $this->nullableString($payload['url'] ?? null);
+        if ($urlValue === null) {
+            $urlValue = $this->nullableString($payload['routeUrl'] ?? null);
         }
 
-        if ($routeUri === null) {
+        $uriValue = $this->nullableString($payload['uri'] ?? null);
+        if ($uriValue === null) {
+            $uriValue = $this->nullableString($payload['routeUri'] ?? null);
+        }
+
+        [$urlValue, $uriValue] = $this->normalizeUrlAndUriValues($urlValue, $uriValue);
+
+        $url = null;
+        if ($urlId !== null) {
+            $url = $this->logUrlRepository->find((int) $urlId);
+            if (!$url instanceof LogUrl) {
+                throw new InvalidArgumentException(sprintf('URL introuvable pour l\'id %s.', (string) $urlId));
+            }
+        }
+
+        if ($url === null && $urlValue !== null) {
+            $url = $this->logUrlRepository->findOneBy(['url' => $urlValue]);
+            if (!$url instanceof LogUrl) {
+                $url = new LogUrl();
+                $url->setUrl($urlValue);
+                $this->entityManager->persist($url);
+            }
+        }
+
+        $uri = null;
+        if ($uriId !== null) {
+            $uri = $this->logUriRepository->find((int) $uriId);
+            if (!$uri instanceof LogUri) {
+                throw new InvalidArgumentException(sprintf('URI introuvable pour l\'id %s.', (string) $uriId));
+            }
+        }
+
+        if ($uri === null && $uriValue !== null) {
+            $uri = $this->logUriRepository->findOneBy(['uri' => $uriValue]);
+            if (!$uri instanceof LogUri) {
+                $uri = new LogUri();
+                $uri->setUri($uriValue);
+                $this->entityManager->persist($uri);
+            }
+        }
+
+        if ($uri instanceof LogUri && $uri->getUrl() instanceof LogUrl) {
+            if ($url instanceof LogUrl && $uri->getUrl()->getId() !== $url->getId()) {
+                throw new InvalidArgumentException('Incoherence entre URL et URI: cette URI est deja rattachee a une autre URL.');
+            }
+
+            if (!$url instanceof LogUrl) {
+                $url = $uri->getUrl();
+            }
+        }
+
+        if ($uri instanceof LogUri && !$url instanceof LogUrl) {
+            throw new InvalidArgumentException('Une URI doit etre rattachee a une URL. Fournissez "url"/"routeUrl" ou "urlId".');
+        }
+
+        if ($uri instanceof LogUri && $url instanceof LogUrl && $uri->getUrl() === null) {
+            $uri->setUrl($url);
+        }
+
+        return [$url, $uri];
+    }
+
+    private function normalizeUrlAndUriValues(?string $urlValue, ?string $uriValue): array
+    {
+        if ($urlValue === null) {
+            return [$urlValue, $uriValue];
+        }
+
+        $extractedUri = $this->extractUriFromUrlValue($urlValue);
+
+        if ($uriValue === null && $extractedUri !== null) {
+            $uriValue = $extractedUri;
+        }
+
+        if ($uriValue !== null && $extractedUri !== null) {
+            $urlValue = $this->stripUriFromUrlValue($urlValue);
+        }
+
+        return [$urlValue, $uriValue];
+    }
+
+    private function extractUriFromUrlValue(string $urlValue): ?string
+    {
+        if (str_starts_with($urlValue, '/')) {
+            return $urlValue;
+        }
+
+        if (!filter_var($urlValue, FILTER_VALIDATE_URL)) {
             return null;
         }
 
-        $route = $this->logRouteRepository->findOneBy(['uri' => $routeUri]);
-        if ($route instanceof LogRoute) {
-            return $route;
+        $path = parse_url($urlValue, PHP_URL_PATH);
+        if (!is_string($path) || $path === '' || $path === '/') {
+            return null;
         }
 
-        $newRoute = new LogRoute();
-        $newRoute->setUri($routeUri);
-        $this->entityManager->persist($newRoute);
+        return $path;
+    }
 
-        return $newRoute;
+    private function stripUriFromUrlValue(string $urlValue): ?string
+    {
+        if (str_starts_with($urlValue, '/')) {
+            return null;
+        }
+
+        if (!filter_var($urlValue, FILTER_VALIDATE_URL)) {
+            return $urlValue;
+        }
+
+        $parts = parse_url($urlValue);
+        if ($parts === false || !isset($parts['scheme'], $parts['host'])) {
+            return $urlValue;
+        }
+
+        $normalized = sprintf('%s://', $parts['scheme']);
+
+        if (isset($parts['user'])) {
+            $normalized .= $parts['user'];
+            if (isset($parts['pass'])) {
+                $normalized .= ':' . $parts['pass'];
+            }
+            $normalized .= '@';
+        }
+
+        $normalized .= $parts['host'];
+
+        if (isset($parts['port'])) {
+            $normalized .= ':' . $parts['port'];
+        }
+
+        return $normalized;
+    }
+
+    private function deleteOrphanUrisAndUrls(): void
+    {
+        $this->entityManager->createQuery(
+            'DELETE FROM App\\RessLogs\\Entity\\LogUri u
+             WHERE NOT EXISTS (
+                SELECT 1 FROM App\\RessLogs\\Entity\\LogEntry e WHERE e.uri = u
+             )'
+        )->execute();
+
+        $this->entityManager->createQuery(
+            'DELETE FROM App\\RessLogs\\Entity\\LogUrl u
+             WHERE NOT EXISTS (
+                SELECT 1 FROM App\\RessLogs\\Entity\\LogEntry e WHERE e.url = u
+             )
+             AND NOT EXISTS (
+                SELECT 1 FROM App\\RessLogs\\Entity\\LogUri i WHERE i.url = u
+             )'
+        )->execute();
     }
 
     /**
