@@ -3,6 +3,7 @@
 namespace App\RessAuth\Command;
 
 use App\RessAuth\Entity\AuthCredential;
+use App\RessAuth\RessAuthConstants;
 use App\RessAuth\Repository\AuthCredentialRepository;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
@@ -16,8 +17,8 @@ use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
-    name: 'app:logs:set-source-secret',
-    description: 'Crée ou met à jour une source canonique et son clientSecret dans la table auth unique (stocké en Argon2id).',
+    name: RessAuthConstants::COMMAND_NAME,
+    description: RessAuthConstants::COMMAND_DESCRIPTION,
 )]
 final class SetLogSourceSecretCommand extends Command
 {
@@ -31,32 +32,32 @@ final class SetLogSourceSecretCommand extends Command
     protected function configure(): void
     {
         $this
-            ->addArgument('sourceApiKey', InputArgument::REQUIRED, 'La sourceApiKey (identifiant public) de la source à configurer.')
-            ->addOption('secret', null, InputOption::VALUE_REQUIRED, 'Secret à définir (si omis, un secret aléatoire est généré et affiché une seule fois).')
-            ->addOption('name', null, InputOption::VALUE_REQUIRED, 'Nom de la source si elle doit être créée (par défaut: sourceApiKey).')
-            ->addOption('type', null, InputOption::VALUE_REQUIRED, 'Type de la source si elle doit être créée (par défaut: backend).')
-            ->addOption('show', null, InputOption::VALUE_NONE, 'Affiche le secret généré en clair après enregistrement (à copier immédiatement, non stocké en clair).');
+            ->addArgument(RessAuthConstants::ARG_SOURCE_API_KEY, InputArgument::REQUIRED, RessAuthConstants::ARG_SOURCE_API_KEY_DESCRIPTION)
+            ->addOption(RessAuthConstants::OPTION_SECRET, null, InputOption::VALUE_REQUIRED, RessAuthConstants::OPTION_SECRET_DESCRIPTION)
+            ->addOption(RessAuthConstants::OPTION_NAME, null, InputOption::VALUE_REQUIRED, RessAuthConstants::OPTION_NAME_DESCRIPTION)
+            ->addOption(RessAuthConstants::OPTION_TYPE, null, InputOption::VALUE_REQUIRED, RessAuthConstants::OPTION_TYPE_DESCRIPTION)
+            ->addOption(RessAuthConstants::OPTION_SHOW, null, InputOption::VALUE_NONE, RessAuthConstants::OPTION_SHOW_DESCRIPTION);
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
 
-        $sourceApiKey = (string) $input->getArgument('sourceApiKey');
+        $sourceApiKey = (string) $input->getArgument(RessAuthConstants::ARG_SOURCE_API_KEY);
 
         $source = $this->authCredentialRepository->findOneBy(['apiKey' => $sourceApiKey]);
         $created = false;
         if (!$source instanceof AuthCredential) {
             /** @var string|null $nameOption */
-            $nameOption = $input->getOption('name');
+            $nameOption = $input->getOption(RessAuthConstants::OPTION_NAME);
             /** @var string|null $typeOption */
-            $typeOption = $input->getOption('type');
+            $typeOption = $input->getOption(RessAuthConstants::OPTION_TYPE);
 
             $source = new AuthCredential();
             $source
                 ->setApiKey($sourceApiKey)
                 ->setName($nameOption !== null && trim($nameOption) !== '' ? trim($nameOption) : $sourceApiKey)
-                ->setType($typeOption !== null && trim($typeOption) !== '' ? trim($typeOption) : 'backend')
+                ->setType($typeOption !== null && trim($typeOption) !== '' ? trim($typeOption) : RessAuthConstants::SOURCE_TYPE_BACKEND)
                 ->setIsActive(true)
                 ->setCreatedAt(new DateTimeImmutable())
                 ->setUpdatedAt(new DateTimeImmutable());
@@ -65,16 +66,16 @@ final class SetLogSourceSecretCommand extends Command
             $created = true;
         }
 
-        $sourceIdentifier = $source->getId() ?? 'nouvelle';
-        $io->title(sprintf('Source : %s (id: %s, type: %s, active: %s)', $source->getName(), (string) $sourceIdentifier, $source->getType(), $source->isActive() ? 'oui' : 'non'));
+        $sourceIdentifier = $source->getId() ?? RessAuthConstants::SOURCE_IDENTIFIER_NEW;
+        $io->title(sprintf(RessAuthConstants::TITLE_SOURCE, $source->getName(), (string) $sourceIdentifier, $source->getType(), $source->isActive() ? RessAuthConstants::BOOLEAN_YES : RessAuthConstants::BOOLEAN_NO));
 
         /** @var string|null $secret */
-        $secret = $input->getOption('secret');
+        $secret = $input->getOption(RessAuthConstants::OPTION_SECRET);
 
         if ($secret === null) {
             if ($input->isInteractive()) {
-                $helper = $this->getHelper('question');
-                $question = new Question('<info>Secret à définir</info> (laisser vide pour générer automatiquement) : ');
+                $helper = $this->getHelper(RessAuthConstants::CONSOLE_HELPER_QUESTION);
+            $question = new Question(RessAuthConstants::QUESTION_SECRET);
                 $question->setHidden(true);
                 $question->setHiddenFallback(false);
                 /** @var string|null $answer */
@@ -90,7 +91,7 @@ final class SetLogSourceSecretCommand extends Command
         }
 
         if (strlen($secret) < 16) {
-            $io->error('Le secret doit comporter au moins 16 caractères.');
+            $io->error(RessAuthConstants::ERROR_SECRET_TOO_SHORT);
 
             return Command::FAILURE;
         }
@@ -103,11 +104,11 @@ final class SetLogSourceSecretCommand extends Command
 
         $this->entityManager->flush();
 
-        $io->success($created ? 'Source auth créée et secret défini avec succès.' : 'Secret de la source auth mis à jour avec succès.');
+        $io->success($created ? RessAuthConstants::SUCCESS_SOURCE_CREATED : RessAuthConstants::SUCCESS_SOURCE_UPDATED);
 
-        if ($generated || $input->getOption('show')) {
-            $io->caution('Secret en clair (à copier immédiatement, il ne sera plus accessible) :');
-            $io->writeln('  <fg=yellow>' . $secret . '</>');
+        if ($generated || $input->getOption(RessAuthConstants::OPTION_SHOW)) {
+            $io->caution(RessAuthConstants::CAUTION_SECRET_CLEAR);
+            $io->writeln(sprintf(RessAuthConstants::SECRET_OUTPUT_FORMAT, $secret));
         }
 
         return Command::SUCCESS;

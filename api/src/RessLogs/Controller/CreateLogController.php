@@ -4,6 +4,7 @@ namespace App\RessLogs\Controller;
 
 use App\RessAuth\Security\AccessTokenResolverInterface;
 use App\RessLogs\Mapper\CreateLogRequestMapperInterface;
+use App\RessLogs\RessLogsConstants;
 use App\RessLogs\Service\LogRecorderInterface;
 use InvalidArgumentException;
 use JsonException;
@@ -20,26 +21,26 @@ final class CreateLogController
     ) {
     }
 
-    #[Route('/api/logs', name: 'api_logs_create', methods: ['POST'])]
+    #[Route(RessLogsConstants::LOGS_PATH, name: RessLogsConstants::LOGS_ROUTE, methods: ['POST'])]
     public function __invoke(Request $request): JsonResponse
     {
         try {
             $payload = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
         } catch (JsonException) {
             return new JsonResponse([
-                'error' => 'JSON invalide.',
+                RessLogsConstants::RESPONSE_KEY_ERROR => RessLogsConstants::ERROR_JSON_INVALID,
             ], JsonResponse::HTTP_BAD_REQUEST);
         }
 
         if (!is_array($payload)) {
             return new JsonResponse([
-                'error' => 'Le corps de la requête doit être un objet JSON.',
+                RessLogsConstants::RESPONSE_KEY_ERROR => RessLogsConstants::ERROR_JSON_OBJECT_REQUIRED,
             ], JsonResponse::HTTP_BAD_REQUEST);
         }
 
-        if (array_key_exists('sourceApiKey', $payload) || array_key_exists('sourceId', $payload)) {
+        if (array_key_exists(RessLogsConstants::FIELD_SOURCE_API_KEY, $payload) || array_key_exists(RessLogsConstants::FIELD_SOURCE_ID, $payload)) {
             return new JsonResponse([
-                'error' => 'Les champs "sourceApiKey" et "sourceId" ne sont pas acceptés dans le body. Utilisez le header Authorization avec un Bearer JWT valide.',
+                RessLogsConstants::RESPONSE_KEY_ERROR => RessLogsConstants::ERROR_SOURCE_FIELDS_FORBIDDEN,
             ], JsonResponse::HTTP_BAD_REQUEST);
         }
 
@@ -55,13 +56,13 @@ final class CreateLogController
             $entry = $this->logRecorder->record($requestDto);
         } catch (InvalidArgumentException $exception) {
             return new JsonResponse([
-                'error' => $exception->getMessage(),
+                RessLogsConstants::RESPONSE_KEY_ERROR => $exception->getMessage(),
             ], JsonResponse::HTTP_BAD_REQUEST);
         }
 
         return new JsonResponse([
-            'id' => $entry->getId(),
-            'status' => 'created',
+            RessLogsConstants::RESPONSE_KEY_ID => $entry->getId(),
+            RessLogsConstants::RESPONSE_KEY_STATUS => RessLogsConstants::RESPONSE_STATUS_CREATED,
         ], JsonResponse::HTTP_CREATED);
     }
 }

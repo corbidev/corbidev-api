@@ -3,6 +3,7 @@
 namespace App\RessAuth\Repository;
 
 use App\RessAuth\Entity\AuthCredential;
+use App\RessAuth\RessAuthConstants;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -18,10 +19,10 @@ class AuthCredentialRepository extends ServiceEntityRepository
 
     public function findActiveOneBySourceApiKey(string $sourceApiKey): ?AuthCredential
     {
-        return $this->createQueryBuilder('credential')
-            ->andWhere('credential.apiKey = :sourceApiKey')
-            ->andWhere('credential.isActive = true')
-            ->setParameter('sourceApiKey', $sourceApiKey)
+        return $this->createQueryBuilder(RessAuthConstants::QUERY_ALIAS_CREDENTIAL)
+            ->andWhere(RessAuthConstants::QUERY_CREDENTIAL_API_KEY)
+            ->andWhere(RessAuthConstants::QUERY_CREDENTIAL_IS_ACTIVE)
+            ->setParameter(RessAuthConstants::QUERY_PARAM_SOURCE_API_KEY, $sourceApiKey)
             ->getQuery()
             ->getOneOrNullResult();
     }

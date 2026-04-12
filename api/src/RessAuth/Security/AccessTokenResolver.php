@@ -2,6 +2,7 @@
 
 namespace App\RessAuth\Security;
 
+use App\RessAuth\RessAuthConstants;
 use InvalidArgumentException;
 use Lexik\Bundle\JWTAuthenticationBundle\Exception\JWTDecodeFailureException;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
@@ -16,28 +17,28 @@ final class AccessTokenResolver implements AccessTokenResolverInterface
 
     public function verifyRequest(Request $request): AccessTokenContext
     {
-        $authorization = $request->headers->get('Authorization');
+        $authorization = $request->headers->get(RessAuthConstants::AUTHORIZATION_HEADER);
         if (!is_string($authorization) || trim($authorization) === '') {
             return new AccessTokenContext(null, null);
         }
 
-        if (!preg_match('/^Bearer\s+(.+)$/i', $authorization, $matches)) {
-            throw new InvalidArgumentException('Le header Authorization doit utiliser le schema Bearer.');
+        if (!preg_match(RessAuthConstants::BEARER_TOKEN_PATTERN, $authorization, $matches)) {
+            throw new InvalidArgumentException(RessAuthConstants::ERROR_AUTH_HEADER_SCHEME);
         }
 
         $jwt = trim($matches[1]);
         if ($jwt === '') {
-            throw new InvalidArgumentException('Le token JWT est vide.');
+            throw new InvalidArgumentException(RessAuthConstants::ERROR_EMPTY_JWT);
         }
 
         try {
             $payload = $this->jwtTokenManager->parse($jwt);
         } catch (JWTDecodeFailureException) {
-            throw new InvalidArgumentException('Token JWT invalide ou expire.');
+            throw new InvalidArgumentException(RessAuthConstants::ERROR_INVALID_OR_EXPIRED_JWT);
         }
 
         $sourceApiKey = null;
-        foreach (['sourceApiKey', 'source_api_key', 'apiKey', 'api_key'] as $claimName) {
+        foreach (RessAuthConstants::SOURCE_CLAIMS as $claimName) {
             $claim = $payload[$claimName] ?? null;
             if (is_string($claim) && trim($claim) !== '') {
                 $sourceApiKey = trim($claim);
@@ -46,7 +47,7 @@ final class AccessTokenResolver implements AccessTokenResolverInterface
         }
 
         $sourceId = null;
-        foreach (['sourceId', 'source_id'] as $claimName) {
+        foreach (RessAuthConstants::SOURCE_ID_CLAIMS as $claimName) {
             $claim = $payload[$claimName] ?? null;
             if (is_int($claim) && $claim > 0) {
                 $sourceId = $claim;
@@ -67,7 +68,7 @@ final class AccessTokenResolver implements AccessTokenResolverInterface
         $context = $this->verifyRequest($request);
 
         if ($context->sourceApiKey === null && $context->sourceId === null) {
-            throw new InvalidArgumentException('Le header Authorization avec un Bearer JWT valide est obligatoire.');
+            throw new InvalidArgumentException(RessAuthConstants::ERROR_AUTH_HEADER_REQUIRED);
         }
 
         return $context;

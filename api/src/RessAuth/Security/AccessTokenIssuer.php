@@ -3,6 +3,7 @@
 namespace App\RessAuth\Security;
 
 use App\RessAuth\Entity\AuthCredential;
+use App\RessAuth\RessAuthConstants;
 use App\RessAuth\Repository\AuthCredentialRepository;
 use InvalidArgumentException;
 use Lexik\Bundle\JWTAuthenticationBundle\Encoder\JWTEncoderInterface;
@@ -24,17 +25,17 @@ final class AccessTokenIssuer implements AccessTokenIssuerInterface
         $credential = $this->authCredentialRepository->findActiveOneBySourceApiKey($normalizedApiKey);
 
         if (!$credential instanceof AuthCredential) {
-            password_verify($clientSecret, '$argon2id$v=19$m=65536,t=4,p=1$dummysaltdummysalt$dummyhashvaluedummyhashvaluedummyhashvalue');
-            throw new InvalidArgumentException('Identifiants invalides.');
+            password_verify($clientSecret, RessAuthConstants::DUMMY_PASSWORD_HASH);
+            throw new InvalidArgumentException(RessAuthConstants::ERROR_INVALID_CREDENTIALS);
         }
 
         $storedHash = $credential->getClientSecretHash();
         if ($storedHash === null || $storedHash === '') {
-            throw new InvalidArgumentException('Aucun secret configure pour cette source. Contactez l\'administrateur.');
+            throw new InvalidArgumentException(RessAuthConstants::ERROR_SECRET_NOT_CONFIGURED);
         }
 
         if (!password_verify($clientSecret, $storedHash)) {
-            throw new InvalidArgumentException('Identifiants invalides.');
+            throw new InvalidArgumentException(RessAuthConstants::ERROR_INVALID_CREDENTIALS);
         }
 
         return $this->issueForSource($credential);
@@ -49,17 +50,17 @@ final class AccessTokenIssuer implements AccessTokenIssuerInterface
         $expiresIn = self::DEFAULT_TTL_SECONDS;
 
         $token = $this->jwtEncoder->encode([
-            'sourceApiKey' => $source->getApiKey(),
-            'sourceId' => $source->getId(),
-            'sourceName' => $source->getName(),
-            'sourceType' => $source->getType(),
-            'iat' => $now,
-            'exp' => $now + $expiresIn,
+            RessAuthConstants::JWT_CLAIM_SOURCE_API_KEY => $source->getApiKey(),
+            RessAuthConstants::JWT_CLAIM_SOURCE_ID => $source->getId(),
+            RessAuthConstants::JWT_CLAIM_SOURCE_NAME => $source->getName(),
+            RessAuthConstants::JWT_CLAIM_SOURCE_TYPE => $source->getType(),
+            RessAuthConstants::JWT_CLAIM_ISSUED_AT => $now,
+            RessAuthConstants::JWT_CLAIM_EXPIRES_AT => $now + $expiresIn,
         ]);
 
         return [
-            'accessToken' => $token,
-            'expiresIn' => $expiresIn,
+            RessAuthConstants::PAYLOAD_KEY_ACCESS_TOKEN => $token,
+            RessAuthConstants::PAYLOAD_KEY_EXPIRES_IN => $expiresIn,
         ];
     }
 }
