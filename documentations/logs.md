@@ -10,15 +10,32 @@ Le module de logs permet d'enregistrer des événements applicatifs dans l'API v
 
 ## Fonctionnement global
 
-1. Le contrôleur reçoit un JSON.
-2. Il récupère la clé source (`sourceApiKey`) depuis :
-   - le body JSON, ou
-   - l'en-tête `x-api-key`, ou
-   - l'en-tête `Authorization: Bearer <token>`.
-3. Le service `LogRecorder` valide et enrichit les données.
-4. Le log est persisté en base (`log_entry`) avec ses relations (`log_level`, `log_env`, `log_source`, `log_url`, `log_uri`, `log_tag`, `log_entry_tag`).
+- Le contrôleur reçoit un JSON.
+- Il récupère la clé source (`sourceApiKey`) depuis le body JSON, l'en-tête `x-api-key` ou un JWT dans l'en-tête `Authorization: Bearer <jwt>`.
+- Le service `LogRecorder` valide et enrichit les données.
+- Le log est persisté en base (`log_entry`) avec ses relations (`log_level`, `log_env`, `log_source`, `log_url`, `log_uri`, `log_tag`, `log_entry_tag`).
 
 ## Endpoint
+
+### Requête token consommateur
+
+- Méthode : `POST`
+- URL : `/api/logs/token`
+- Header recommandé :
+  - `Content-Type: application/json`
+  - `x-api-key: <source_api_key>`
+- Body JSON possible :
+  - `sourceApiKey` (string)
+
+Réponse succès (`201 Created`) :
+
+```json
+{
+  "token_type": "Bearer",
+  "access_token": "<jwt>",
+  "expires_in": 3600
+}
+```
 
 ### Requête
 
@@ -27,6 +44,20 @@ Le module de logs permet d'enregistrer des événements applicatifs dans l'API v
 - Header recommandé :
   - `Content-Type: application/json`
   - `x-api-key: <source_api_key>`
+  - ou `Authorization: Bearer <jwt>`
+
+### Authentification JWT (consommateurs)
+
+- Le token JWT est validé (signature + expiration) via la configuration Lexik JWT.
+- Le token s'obtient via `POST /api/logs/token` avec une `sourceApiKey` active.
+- Si le token est valide, la source est résolue via une claim contenant la clé API.
+- Claims supportées (dans cet ordre) :
+  - `sourceApiKey`
+  - `source_api_key`
+  - `apiKey`
+  - `api_key`
+- Si `x-api-key` est présent et non vide, il reste prioritaire.
+- Si le header `Authorization` est présent mais pas au format Bearer, la requête est rejetée en `400`.
 
 ### Payload JSON
 
@@ -61,6 +92,7 @@ Le module de logs permet d'enregistrer des événements applicatifs dans l'API v
 - `env` : recherche par id ou nom (`dev`, `test`, `prod`).
 - `source` :
   - priorité à `sourceId`, sinon `sourceApiKey` (source active).
+  - `sourceApiKey` peut venir du body, de `x-api-key` ou d'un JWT Bearer.
   - erreur si introuvable.
 - `url/uri` :
   - `url` est obligatoire et doit etre une URL absolue valide (`http` ou `https`).
@@ -131,11 +163,36 @@ curl -X POST "http://127.0.0.1:8000/api/logs" \
   }'
 ```
 
+## Exemple de requête avec JWT
+
+```bash
+curl -X POST "http://127.0.0.1:8000/api/logs" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <jwt_avec_claim_sourceApiKey>" \
+  -d '{
+    "message": "Erreur sur endpoint /api/users",
+    "url": "https://api.corbisier.test/api/users",
+    "level": "error",
+    "env": "prod"
+  }'
+```
+
+## Exemple de génération de token JWT
+
+```bash
+curl -X POST "http://127.0.0.1:8000/api/logs/token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sourceApiKey": "replace-with-valid-source-api-key"
+  }'
+```
+
 ## Postman
 
 Une collection prête à l'import est disponible :
 
 - `api/postman/corbidev-api-logs.postman_collection.json`
+- Elle inclut le dossier `Scenario - JWT token then log` (génération du token puis envoi du log avec Bearer).
 
 ## Notes d'implémentation
 

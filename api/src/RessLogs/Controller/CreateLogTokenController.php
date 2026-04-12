@@ -2,25 +2,21 @@
 
 namespace App\RessLogs\Controller;
 
-use App\RessLogs\Mapper\CreateLogRequestMapperInterface;
-use App\RessLogs\Security\LogConsumerJwtResolverInterface;
-use App\RessLogs\Service\LogRecorderInterface;
+use App\RessLogs\Security\LogConsumerJwtIssuerInterface;
 use InvalidArgumentException;
 use JsonException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 
-final class CreateLogController
+final class CreateLogTokenController
 {
     public function __construct(
-        private readonly CreateLogRequestMapperInterface $createLogRequestMapper,
-        private readonly LogConsumerJwtResolverInterface $logConsumerJwtResolver,
-        private readonly LogRecorderInterface $logRecorder,
+        private readonly LogConsumerJwtIssuerInterface $logConsumerJwtIssuer,
     ) {
     }
 
-    #[Route('/api/logs', name: 'api_logs_create', methods: ['POST'])]
+    #[Route('/api/logs/token', name: 'api_logs_token_create', methods: ['POST'])]
     public function __invoke(Request $request): JsonResponse
     {
         try {
@@ -37,14 +33,10 @@ final class CreateLogController
             ], JsonResponse::HTTP_BAD_REQUEST);
         }
 
-        try {
-            $apiKey = $request->headers->get('x-api-key');
-            if (!is_string($apiKey) || trim($apiKey) === '') {
-                $apiKey = $this->logConsumerJwtResolver->resolveSourceApiKeyFromRequest($request);
-            }
+        $sourceApiKey = $payload['sourceApiKey'] ?? $request->headers->get('x-api-key');
 
-            $requestDto = $this->createLogRequestMapper->map($payload, is_string($apiKey) ? $apiKey : null);
-            $entry = $this->logRecorder->record($requestDto);
+        try {
+            $tokenPayload = $this->logConsumerJwtIssuer->issueFromSourceApiKey((string) $sourceApiKey);
         } catch (InvalidArgumentException $exception) {
             return new JsonResponse([
                 'error' => $exception->getMessage(),
@@ -52,8 +44,9 @@ final class CreateLogController
         }
 
         return new JsonResponse([
-            'id' => $entry->getId(),
-            'status' => 'created',
+            'token_type' => 'Bearer',
+            'access_token' => $tokenPayload['accessToken'],
+            'expires_in' => $tokenPayload['expiresIn'],
         ], JsonResponse::HTTP_CREATED);
     }
 }
