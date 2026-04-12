@@ -1,6 +1,6 @@
 <?php
 
-namespace App\RessAuth\Security;
+namespace App\RessAuth\Dto;
 
 final readonly class AccessTokenContext
 {

@@ -60,8 +60,8 @@ final class CreateAccessTokenController
 
         return new JsonResponse([
             RessAuthConstants::RESPONSE_KEY_TOKEN_TYPE => RessAuthConstants::TOKEN_TYPE_BEARER,
-            RessAuthConstants::RESPONSE_KEY_ACCESS_TOKEN => $tokenPayload[RessAuthConstants::PAYLOAD_KEY_ACCESS_TOKEN],
-            RessAuthConstants::RESPONSE_KEY_EXPIRES_IN => $tokenPayload[RessAuthConstants::PAYLOAD_KEY_EXPIRES_IN],
+            RessAuthConstants::RESPONSE_KEY_ACCESS_TOKEN => $tokenPayload->accessToken,
+            RessAuthConstants::RESPONSE_KEY_EXPIRES_IN => $tokenPayload->expiresIn,
         ], JsonResponse::HTTP_CREATED);
     }
 }

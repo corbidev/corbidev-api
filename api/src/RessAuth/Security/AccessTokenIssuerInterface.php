@@ -2,10 +2,9 @@
 
 namespace App\RessAuth\Security;
 
+use App\RessAuth\Dto\AccessTokenPayload;
+
 interface AccessTokenIssuerInterface
 {
-    /**
-     * @return array{accessToken: string, expiresIn: int}
-     */
-    public function issueFromCredentials(string $sourceApiKey, string $clientSecret): array;
+    public function issueFromCredentials(string $sourceApiKey, string $clientSecret): AccessTokenPayload;
 }

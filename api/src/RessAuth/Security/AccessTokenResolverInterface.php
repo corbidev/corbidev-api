@@ -2,6 +2,7 @@
 
 namespace App\RessAuth\Security;
 
+use App\RessAuth\Dto\AccessTokenContext;
 use Symfony\Component\HttpFoundation\Request;
 
 interface AccessTokenResolverInterface

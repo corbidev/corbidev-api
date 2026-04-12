@@ -2,6 +2,7 @@
 
 namespace App\RessAuth\Security;
 
+use App\RessAuth\Dto\AccessTokenPayload;
 use App\RessAuth\Entity\AuthCredential;
 use App\RessAuth\RessAuthConstants;
 use App\RessAuth\Repository\AuthCredentialRepository;
@@ -18,7 +19,7 @@ final class AccessTokenIssuer implements AccessTokenIssuerInterface
     ) {
     }
 
-    public function issueFromCredentials(string $sourceApiKey, string $clientSecret): array
+    public function issueFromCredentials(string $sourceApiKey, string $clientSecret): AccessTokenPayload
     {
         $normalizedApiKey = trim($sourceApiKey);
 
@@ -41,10 +42,7 @@ final class AccessTokenIssuer implements AccessTokenIssuerInterface
         return $this->issueForSource($credential);
     }
 
-    /**
-     * @return array{accessToken: string, expiresIn: int}
-     */
-    private function issueForSource(AuthCredential $source): array
+    private function issueForSource(AuthCredential $source): AccessTokenPayload
     {
         $now = time();
         $expiresIn = self::DEFAULT_TTL_SECONDS;
@@ -58,9 +56,9 @@ final class AccessTokenIssuer implements AccessTokenIssuerInterface
             RessAuthConstants::JWT_CLAIM_EXPIRES_AT => $now + $expiresIn,
         ]);
 
-        return [
-            RessAuthConstants::PAYLOAD_KEY_ACCESS_TOKEN => $token,
-            RessAuthConstants::PAYLOAD_KEY_EXPIRES_IN => $expiresIn,
-        ];
+        return new AccessTokenPayload(
+            accessToken: $token,
+            expiresIn: $expiresIn,
+        );
     }
 }

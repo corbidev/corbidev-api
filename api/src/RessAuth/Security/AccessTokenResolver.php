@@ -2,6 +2,7 @@
 
 namespace App\RessAuth\Security;
 
+use App\RessAuth\Dto\AccessTokenContext;
 use App\RessAuth\RessAuthConstants;
 use InvalidArgumentException;
 use Lexik\Bundle\JWTAuthenticationBundle\Exception\JWTDecodeFailureException;
