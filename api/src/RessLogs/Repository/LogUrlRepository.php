@@ -15,4 +15,17 @@ class LogUrlRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, LogUrl::class);
     }
+
+    public function deleteOrphans(): void
+    {
+        $this->getEntityManager()->createQuery(
+            'DELETE FROM App\\RessLogs\\Entity\\LogUrl u
+             WHERE NOT EXISTS (
+                SELECT 1 FROM App\\RessLogs\\Entity\\LogEntry e WHERE e.url = u
+             )
+             AND NOT EXISTS (
+                SELECT 1 FROM App\\RessLogs\\Entity\\LogUri i WHERE i.url = u
+             )'
+        )->execute();
+    }
 }

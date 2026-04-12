@@ -23,7 +23,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"message\": \"Erreur sur endpoint /api/users\",\n  \"title\": \"API Error\",\n  \"level\": \"error\",\n  \"env\": \"dev\",\n  \"httpStatus\": 500,\n  \"durationMs\": 231,\n  \"fingerprint\": \"b6b8fce4e5237f8dca8f8f9164de74f35f3f4f5ff24a5ce2f9ecf3f2d7d49d11\",\n  \"context\": {\n    \"method\": \"GET\",\n    \"traceId\": \"trace-12345\",\n    \"userId\": 42\n  },\n  \"routeUrl\": \"/api/users\",\n  \"routeUri\": \"/api/users\",\n  \"tags\": [\"backend\", \"exception\"]\n}",
+          "raw": "{\n  \"message\": \"Erreur sur endpoint /api/users\",\n  \"url\": \"https://api.corbisier.test/api/users\",\n  \"title\": \"API Error\",\n  \"level\": \"error\",\n  \"env\": \"dev\",\n  \"httpStatus\": 500,\n  \"durationMs\": 231,\n  \"fingerprint\": \"b6b8fce4e5237f8dca8f8f9164de74f35f3f4f5ff24a5ce2f9ecf3f2d7d49d11\",\n  \"context\": {\n    \"method\": \"GET\",\n    \"traceId\": \"trace-12345\",\n    \"userId\": 42\n  },\n  \"routeUri\": \"/api/users\",\n  \"tags\": [\"backend\", \"exception\"]\n}",
           "options": {
             "raw": {
               "language": "json"

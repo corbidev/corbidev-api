@@ -2,6 +2,7 @@
 
 namespace App\RessLogs\Service;
 
+use App\RessLogs\Dto\CreateLogRequestDto;
 use App\RessLogs\Entity\LogEntry;
 use App\RessLogs\Entity\LogEntryTag;
 use App\RessLogs\Entity\LogEnv;
@@ -20,7 +21,7 @@ use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use InvalidArgumentException;
 
-class LogRecorder
+class LogRecorder implements LogRecorderInterface
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
@@ -33,42 +34,26 @@ class LogRecorder
     ) {
     }
 
-    /**
-     * @param array{
-     *     message: string,
-     *     title?: string|null,
-     *     url?: string|null,
-     *     httpStatus?: int|null,
-     *     durationMs?: int|null,
-     *     fingerprint?: string|null,
-     *     context?: array|null,
-     *     ts?: DateTimeImmutable|string|null,
-     *     createdAt?: DateTimeImmutable|string|null,
-     *     level?: int|string|null,
-     *     env?: int|string|null,
-     *     sourceId?: int|null,
-     *     sourceApiKey?: string|null,
-     *     urlId?: int|null,
-     *     uriId?: int|null,
-     *     routeId?: int|null,
-     *     url?: string|null,
-     *     routeUrl?: string|null,
-     *     routeUri?: string|null,
-     *     uri?: string|null,
-     *     tags?: array<int|string>|null
-     * } $payload
-     */
-    public function record(array $payload): LogEntry
+    public function record(CreateLogRequestDto $request): LogEntry
     {
-        $message = trim((string) ($payload['message'] ?? ''));
+        $message = trim($request->message);
         if ($message === '') {
-            throw new InvalidArgumentException('Le champ "message" est obligatoire.');
+            throw new InvalidArgumentException('Le champ «message» est obligatoire.');
         }
 
-        $level = $this->resolveLevel($payload['level'] ?? null);
-        $env = $this->resolveEnv($payload['env'] ?? null);
-        $source = $this->resolveSource($payload);
-        [$url, $uri] = $this->resolveUrlAndUri($payload);
+        $urlValue = $this->nullableString($request->url);
+        if ($urlValue === null) {
+            throw new InvalidArgumentException('Le champ «url» est obligatoire.');
+        }
+
+        if (!$this->isStandardUrl($urlValue)) {
+            throw new InvalidArgumentException('Le champ «url» doit être une URL valide (http/https).');
+        }
+
+        $level = $this->resolveLevel($request->level);
+        $env = $this->resolveEnv($request->env);
+        $source = $this->resolveSource($request);
+        [$url, $uri] = $this->resolveUrlAndUri($request, $urlValue);
 
         $entry = new LogEntry();
         $entry->setMessage($message);
@@ -77,34 +62,35 @@ class LogRecorder
         $entry->setSource($source);
         $entry->setUrl($url);
         $entry->setUri($uri);
-        $entry->setTs($this->toDateTimeImmutable($payload['ts'] ?? null) ?? new DateTimeImmutable());
-        $entry->setCreatedAt($this->toDateTimeImmutable($payload['createdAt'] ?? null) ?? new DateTimeImmutable());
+        $entry->setTs($this->toDateTimeImmutable($request->ts) ?? new DateTimeImmutable());
+        $entry->setCreatedAt($this->toDateTimeImmutable($request->createdAt) ?? new DateTimeImmutable());
 
-        if (array_key_exists('title', $payload)) {
-            $entry->setTitle($this->nullableString($payload['title']));
+        if ($request->title !== null) {
+            $entry->setTitle($request->title);
         }
 
-        if (array_key_exists('httpStatus', $payload)) {
-            $entry->setHttpStatus($payload['httpStatus'] !== null ? (int) $payload['httpStatus'] : null);
+        if ($request->httpStatus !== null) {
+            $entry->setHttpStatus($request->httpStatus);
         }
 
-        if (array_key_exists('durationMs', $payload)) {
-            $entry->setDurationMs($payload['durationMs'] !== null ? (int) $payload['durationMs'] : null);
+        if ($request->durationMs !== null) {
+            $entry->setDurationMs($request->durationMs);
         }
 
-        if (array_key_exists('fingerprint', $payload)) {
-            $entry->setFingerprint($this->nullableString($payload['fingerprint']));
+        if ($request->fingerprint !== null) {
+            $entry->setFingerprint($request->fingerprint);
         }
 
-        if (array_key_exists('context', $payload)) {
-            $entry->setContext(is_array($payload['context']) ? $payload['context'] : null);
+        if ($request->context !== null) {
+            $entry->setContext($request->context);
         }
 
-        $this->attachTags($entry, $payload['tags'] ?? null);
+        $this->attachTags($entry, $request->tags);
 
         $this->entityManager->persist($entry);
         $this->entityManager->flush();
-        $this->deleteOrphanUrisAndUrls();
+        $this->logUriRepository->deleteOrphans();
+        $this->logUrlRepository->deleteOrphans();
 
         return $entry;
     }
@@ -143,13 +129,10 @@ class LogRecorder
         return $entity;
     }
 
-    /**
-     * @param array<string, mixed> $payload
-     */
-    private function resolveSource(array $payload): LogSource
+    private function resolveSource(CreateLogRequestDto $request): LogSource
     {
-        $sourceId = $payload['sourceId'] ?? null;
-        $sourceApiKey = $payload['sourceApiKey'] ?? null;
+        $sourceId = $request->sourceId;
+        $sourceApiKey = $request->sourceApiKey;
 
         if ($sourceId !== null) {
             $source = $this->logSourceRepository->find((int) $sourceId);
@@ -165,26 +148,16 @@ class LogRecorder
             }
         }
 
-        throw new InvalidArgumentException('Source introuvable. Fournissez "sourceId" ou "sourceApiKey" valide.');
+        throw new InvalidArgumentException('Source introuvable. Fournissez «sourceId» ou «sourceApiKey» valide.');
     }
 
-    /**
-     * @param array<string, mixed> $payload
-     */
-    private function resolveUrlAndUri(array $payload): array
+    private function resolveUrlAndUri(CreateLogRequestDto $request, string $validatedUrl): array
     {
-        $urlId = $payload['urlId'] ?? null;
-        $uriId = $payload['uriId'] ?? $payload['routeId'] ?? null;
+        $urlId = $request->urlId;
+        $uriId = $request->uriId ?? $request->routeId;
 
-        $urlValue = $this->nullableString($payload['url'] ?? null);
-        if ($urlValue === null) {
-            $urlValue = $this->nullableString($payload['routeUrl'] ?? null);
-        }
-
-        $uriValue = $this->nullableString($payload['uri'] ?? null);
-        if ($uriValue === null) {
-            $uriValue = $this->nullableString($payload['routeUri'] ?? null);
-        }
+        $urlValue = $validatedUrl;
+        $uriValue = $request->uri ?? $request->routeUri;
 
         [$urlValue, $uriValue] = $this->normalizeUrlAndUriValues($urlValue, $uriValue);
 
@@ -224,7 +197,7 @@ class LogRecorder
 
         if ($uri instanceof LogUri && $uri->getUrl() instanceof LogUrl) {
             if ($url instanceof LogUrl && $uri->getUrl()->getId() !== $url->getId()) {
-                throw new InvalidArgumentException('Incoherence entre URL et URI: cette URI est deja rattachee a une autre URL.');
+                throw new InvalidArgumentException('Incoherence entre URL et URI: cette URI est deja rattachée a une autre URL.');
             }
 
             if (!$url instanceof LogUrl) {
@@ -233,7 +206,7 @@ class LogRecorder
         }
 
         if ($uri instanceof LogUri && !$url instanceof LogUrl) {
-            throw new InvalidArgumentException('Une URI doit etre rattachee a une URL. Fournissez "url"/"routeUrl" ou "urlId".');
+            throw new InvalidArgumentException('Une URI doit être rattachée à une URL. Fournissez "url"/"routeUrl" ou "urlId".');
         }
 
         if ($uri instanceof LogUri && $url instanceof LogUrl && $uri->getUrl() === null) {
@@ -312,26 +285,6 @@ class LogRecorder
         }
 
         return $normalized;
-    }
-
-    private function deleteOrphanUrisAndUrls(): void
-    {
-        $this->entityManager->createQuery(
-            'DELETE FROM App\\RessLogs\\Entity\\LogUri u
-             WHERE NOT EXISTS (
-                SELECT 1 FROM App\\RessLogs\\Entity\\LogEntry e WHERE e.uri = u
-             )'
-        )->execute();
-
-        $this->entityManager->createQuery(
-            'DELETE FROM App\\RessLogs\\Entity\\LogUrl u
-             WHERE NOT EXISTS (
-                SELECT 1 FROM App\\RessLogs\\Entity\\LogEntry e WHERE e.url = u
-             )
-             AND NOT EXISTS (
-                SELECT 1 FROM App\\RessLogs\\Entity\\LogUri i WHERE i.url = u
-             )'
-        )->execute();
     }
 
     /**
@@ -415,5 +368,19 @@ class LogRecorder
         $stringValue = trim((string) $value);
 
         return $stringValue === '' ? null : $stringValue;
+    }
+
+    private function isStandardUrl(string $url): bool
+    {
+        if (!filter_var($url, FILTER_VALIDATE_URL)) {
+            return false;
+        }
+
+        $parts = parse_url($url);
+        if ($parts === false || !isset($parts['scheme'], $parts['host'])) {
+            return false;
+        }
+
+        return in_array(strtolower((string) $parts['scheme']), ['http', 'https'], true);
     }
 }

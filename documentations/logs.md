@@ -33,12 +33,12 @@ Le module de logs permet d'enregistrer des événements applicatifs dans l'API v
 #### Obligatoire
 
 - `message` (string)
+- `url` (string) — URL absolue valide (`http://...` ou `https://...`)
 - `sourceId` (int) **ou** `sourceApiKey` (string)
 
 #### Optionnel
 
 - `title` (string|null)
-- `url` (string|null) — auto-rempli avec l'URL de la requête si absent
 - `httpStatus` (int|null)
 - `durationMs` (int|null)
 - `fingerprint` (string|null)
@@ -63,6 +63,7 @@ Le module de logs permet d'enregistrer des événements applicatifs dans l'API v
   - priorité à `sourceId`, sinon `sourceApiKey` (source active).
   - erreur si introuvable.
 - `url/uri` :
+  - `url` est obligatoire et doit etre une URL absolue valide (`http` ou `https`).
   - `uriId` (ou `routeId` pour compatibilite) pointe vers une URI existante.
   - `urlId` pointe vers une URL existante.
   - `uri`/`routeUri` permet de rechercher ou creer une URI.
@@ -113,6 +114,7 @@ curl -X POST "http://127.0.0.1:8000/api/logs" \
   -H "x-api-key: replace-with-valid-source-api-key" \
   -d '{
     "message": "Erreur sur endpoint /api/users",
+    "url": "https://api.corbisier.test/api/users",
     "title": "API Error",
     "level": "error",
     "env": "dev",

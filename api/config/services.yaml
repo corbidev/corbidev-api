@@ -19,5 +19,8 @@ services:
     App\:
         resource: '../src/'
 
+    App\RessLogs\Mapper\CreateLogRequestMapperInterface: '@App\RessLogs\Mapper\CreateLogRequestMapper'
+    App\RessLogs\Service\LogRecorderInterface: '@App\RessLogs\Service\LogRecorder'
+
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

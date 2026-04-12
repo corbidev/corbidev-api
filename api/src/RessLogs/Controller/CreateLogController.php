@@ -2,7 +2,8 @@
 
 namespace App\RessLogs\Controller;
 
-use App\RessLogs\Service\LogRecorder;
+use App\RessLogs\Mapper\CreateLogRequestMapperInterface;
+use App\RessLogs\Service\LogRecorderInterface;
 use InvalidArgumentException;
 use JsonException;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -12,7 +13,8 @@ use Symfony\Component\Routing\Attribute\Route;
 final class CreateLogController
 {
     public function __construct(
-        private readonly LogRecorder $logRecorder,
+        private readonly CreateLogRequestMapperInterface $createLogRequestMapper,
+        private readonly LogRecorderInterface $logRecorder,
     ) {
     }
 
@@ -38,16 +40,9 @@ final class CreateLogController
             $apiKey = trim(substr($apiKey, 7));
         }
 
-        if (!isset($payload['sourceApiKey']) && is_string($apiKey) && $apiKey !== '') {
-            $payload['sourceApiKey'] = $apiKey;
-        }
-
-        if (!isset($payload['url'])) {
-            $payload['url'] = $request->getUri();
-        }
-
         try {
-            $entry = $this->logRecorder->record($payload);
+            $requestDto = $this->createLogRequestMapper->map($payload, is_string($apiKey) ? $apiKey : null);
+            $entry = $this->logRecorder->record($requestDto);
         } catch (InvalidArgumentException $exception) {
             return new JsonResponse([
                 'error' => $exception->getMessage(),
