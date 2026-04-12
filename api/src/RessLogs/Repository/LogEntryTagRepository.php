@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Repository\Log;
+namespace App\RessLogs\Repository;
 
-use App\Entity\Log\LogEntryTag;
+use App\RessLogs\Entity\LogEntryTag;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 

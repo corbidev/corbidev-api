@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Entity\Log;
+namespace App\RessLogs\Entity;
 
-use App\Entity\Log\LogEntryTag;
-use App\Repository\Log\LogTagRepository;
+use App\RessLogs\Entity\LogEntryTag;
+use App\RessLogs\Repository\LogTagRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;

@@ -1,29 +1,28 @@
 <?php
 
-namespace App\Entity\Log;
+namespace App\RessLogs\Entity;
 
-use App\Entity\Log\LogEntry;
-use App\Repository\Log\LogRouteRepository;
+use App\RessLogs\Entity\LogEntry;
+use App\RessLogs\Repository\LogEnvRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity(repositoryClass: LogRouteRepository::class)]
-#[ORM\Table(name: 'log_route')]
-class LogRoute
+#[ORM\Entity(repositoryClass: LogEnvRepository::class)]
+#[ORM\Table(name: 'log_env')]
+class LogEnv
 {
     #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column(type: 'bigint')]
+    #[ORM\Column(type: 'smallint')]
     private ?int $id = null;
 
-    #[ORM\Column(length: 255, unique: true)]
-    private ?string $uri = null;
+    #[ORM\Column(length: 20, unique: true)]
+    private ?string $name = null;
 
     /**
      * @var Collection<int, LogEntry>
      */
-    #[ORM\OneToMany(mappedBy: 'route', targetEntity: LogEntry::class)]
+    #[ORM\OneToMany(mappedBy: 'env', targetEntity: LogEntry::class)]
     private Collection $entries;
 
     public function __construct()
@@ -36,14 +35,21 @@ class LogRoute
         return $this->id;
     }
 
-    public function getUri(): ?string
+    public function setId(int $id): static
     {
-        return $this->uri;
+        $this->id = $id;
+
+        return $this;
     }
 
-    public function setUri(string $uri): static
+    public function getName(): ?string
     {
-        $this->uri = $uri;
+        return $this->name;
+    }
+
+    public function setName(string $name): static
+    {
+        $this->name = $name;
 
         return $this;
     }
@@ -60,7 +66,7 @@ class LogRoute
     {
         if (!$this->entries->contains($entry)) {
             $this->entries->add($entry);
-            $entry->setRoute($this);
+            $entry->setEnv($this);
         }
 
         return $this;
@@ -68,8 +74,8 @@ class LogRoute
 
     public function removeEntry(LogEntry $entry): static
     {
-        if ($this->entries->removeElement($entry) && $entry->getRoute() === $this) {
-            $entry->setRoute(null);
+        if ($this->entries->removeElement($entry) && $entry->getEnv() === $this) {
+            $entry->setEnv(null);
         }
 
         return $this;

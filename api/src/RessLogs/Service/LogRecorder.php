@@ -1,19 +1,19 @@
 <?php
 
-namespace App\Service\Log;
+namespace App\RessLogs\Service;
 
-use App\Entity\Log\LogEntry;
-use App\Entity\Log\LogEntryTag;
-use App\Entity\Log\LogEnv;
-use App\Entity\Log\LogLevel;
-use App\Entity\Log\LogRoute;
-use App\Entity\Log\LogSource;
-use App\Entity\Log\LogTag;
-use App\Repository\Log\LogEnvRepository;
-use App\Repository\Log\LogLevelRepository;
-use App\Repository\Log\LogRouteRepository;
-use App\Repository\Log\LogSourceRepository;
-use App\Repository\Log\LogTagRepository;
+use App\RessLogs\Entity\LogEntry;
+use App\RessLogs\Entity\LogEntryTag;
+use App\RessLogs\Entity\LogEnv;
+use App\RessLogs\Entity\LogLevel;
+use App\RessLogs\Entity\LogRoute;
+use App\RessLogs\Entity\LogSource;
+use App\RessLogs\Entity\LogTag;
+use App\RessLogs\Repository\LogEnvRepository;
+use App\RessLogs\Repository\LogLevelRepository;
+use App\RessLogs\Repository\LogRouteRepository;
+use App\RessLogs\Repository\LogSourceRepository;
+use App\RessLogs\Repository\LogTagRepository;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use InvalidArgumentException;
@@ -169,14 +169,7 @@ class LogRecorder
     private function resolveRoute(array $payload): ?LogRoute
     {
         $routeId = $payload['routeId'] ?? null;
-        $routeUrl = $this->nullableString($payload['routeUrl'] ?? null);
         $routeUri = $this->nullableString($payload['routeUri'] ?? null);
-
-        if ($routeUrl !== null && $routeUri !== null && $routeUrl !== $routeUri) {
-            throw new InvalidArgumentException('Les champs "routeUrl" et "routeUri" doivent avoir la même valeur lorsqu\'ils sont fournis ensemble.');
-        }
-
-        $resolvedRouteUri = $routeUrl ?? $routeUri;
 
         if ($routeId !== null) {
             $route = $this->logRouteRepository->find((int) $routeId);
@@ -187,17 +180,17 @@ class LogRecorder
             return $route;
         }
 
-        if ($resolvedRouteUri === null) {
+        if ($routeUri === null) {
             return null;
         }
 
-        $route = $this->logRouteRepository->findOneBy(['uri' => $resolvedRouteUri]);
+        $route = $this->logRouteRepository->findOneBy(['uri' => $routeUri]);
         if ($route instanceof LogRoute) {
             return $route;
         }
 
         $newRoute = new LogRoute();
-        $newRoute->setUri($resolvedRouteUri);
+        $newRoute->setUri($routeUri);
         $this->entityManager->persist($newRoute);
 
         return $newRoute;

@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Controller\Log;
+namespace App\RessLogs\Controller;
 
-use App\Service\Log\LogRecorder;
+use App\RessLogs\Service\LogRecorder;
 use InvalidArgumentException;
 use JsonException;
 use Symfony\Component\HttpFoundation\JsonResponse;

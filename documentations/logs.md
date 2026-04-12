@@ -6,7 +6,7 @@ Le module de logs permet d'enregistrer des événements applicatifs dans l'API v
 
 - Endpoint : `POST /api/logs`
 - Contrôleur : `App\Controller\Log\CreateLogController`
-- Service métier : `App\Service\Log\LogRecorder`
+- Service métier : `App\Service\LogRecorder`
 
 ## Fonctionnement global
 
@@ -61,9 +61,9 @@ Le module de logs permet d'enregistrer des événements applicatifs dans l'API v
   - erreur si introuvable.
 - `route` :
   - si `routeId` fourni, doit exister.
-  - `routeUrl` et `routeUri` sont tous les deux acceptés.
-  - si les deux sont fournis, ils doivent avoir la même valeur.
-  - sinon la valeur fournie crée la route si elle n'existe pas.
+  - `routeUri` sert a resoudre la route (recherche puis creation si inexistante).
+  - si `routeUri` est absent et `routeId` absent, aucune route n'est liee.
+  - `routeUrl` est informatif et independant de `routeUri`.
 - `tags` :
   - accepte id ou nom,
   - crée les tags manquants par nom,

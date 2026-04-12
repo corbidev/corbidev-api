@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Entity\Log;
+namespace App\RessLogs\Entity;
 
-use App\Entity\Log\LogEntry;
-use App\Repository\Log\LogSourceRepository;
+use App\RessLogs\Entity\LogEntry;
+use App\RessLogs\Repository\LogSourceRepository;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
