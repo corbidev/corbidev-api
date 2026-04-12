@@ -14,11 +14,17 @@ final class LogConsumerJwtResolver implements LogConsumerJwtResolverInterface
     ) {
     }
 
-    public function resolveSourceApiKeyFromRequest(Request $request): ?string
+    /**
+     * @return array{sourceApiKey: ?string, sourceId: ?int}
+     */
+    public function resolveSourceContextFromRequest(Request $request): array
     {
         $authorization = $request->headers->get('Authorization');
         if (!is_string($authorization) || trim($authorization) === '') {
-            return null;
+            return [
+                'sourceApiKey' => null,
+                'sourceId' => null,
+            ];
         }
 
         if (!preg_match('/^Bearer\s+(.+)$/i', $authorization, $matches)) {
@@ -36,13 +42,39 @@ final class LogConsumerJwtResolver implements LogConsumerJwtResolverInterface
             throw new InvalidArgumentException('Token JWT invalide ou expiré.');
         }
 
+        $sourceApiKey = null;
         foreach (['sourceApiKey', 'source_api_key', 'apiKey', 'api_key'] as $claimName) {
             $claim = $payload[$claimName] ?? null;
             if (is_string($claim) && trim($claim) !== '') {
-                return trim($claim);
+                $sourceApiKey = trim($claim);
+                break;
             }
         }
 
-        return null;
+        $sourceId = null;
+        foreach (['sourceId', 'source_id'] as $claimName) {
+            $claim = $payload[$claimName] ?? null;
+            if (is_int($claim) && $claim > 0) {
+                $sourceId = $claim;
+                break;
+            }
+
+            if (is_string($claim) && ctype_digit($claim) && (int) $claim > 0) {
+                $sourceId = (int) $claim;
+                break;
+            }
+        }
+
+        return [
+            'sourceApiKey' => $sourceApiKey,
+            'sourceId' => $sourceId,
+        ];
+    }
+
+    public function resolveSourceApiKeyFromRequest(Request $request): ?string
+    {
+        $context = $this->resolveSourceContextFromRequest($request);
+
+        return $context['sourceApiKey'];
     }
 }

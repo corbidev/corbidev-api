@@ -38,9 +38,11 @@ final class CreateLogController
         }
 
         try {
-            $apiKey = $request->headers->get('x-api-key');
-            if (!is_string($apiKey) || trim($apiKey) === '') {
-                $apiKey = $this->logConsumerJwtResolver->resolveSourceApiKeyFromRequest($request);
+            $sourceContext = $this->logConsumerJwtResolver->resolveSourceContextFromRequest($request);
+            $apiKey = $sourceContext['sourceApiKey'];
+
+            if (!isset($payload['sourceId']) && is_int($sourceContext['sourceId'])) {
+                $payload['sourceId'] = $sourceContext['sourceId'];
             }
 
             $requestDto = $this->createLogRequestMapper->map($payload, is_string($apiKey) ? $apiKey : null);

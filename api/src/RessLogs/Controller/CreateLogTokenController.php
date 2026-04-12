@@ -33,10 +33,23 @@ final class CreateLogTokenController
             ], JsonResponse::HTTP_BAD_REQUEST);
         }
 
-        $sourceApiKey = $payload['sourceApiKey'] ?? $request->headers->get('x-api-key');
+        $sourceApiKey = $payload['sourceApiKey'] ?? null;
+        $clientSecret = $payload['clientSecret'] ?? null;
+
+        if (!is_string($sourceApiKey) || '' === trim($sourceApiKey)) {
+            return new JsonResponse([
+                'error' => 'Le champ "sourceApiKey" est obligatoire.',
+            ], JsonResponse::HTTP_BAD_REQUEST);
+        }
+
+        if (!is_string($clientSecret) || '' === trim($clientSecret)) {
+            return new JsonResponse([
+                'error' => 'Le champ "clientSecret" est obligatoire.',
+            ], JsonResponse::HTTP_BAD_REQUEST);
+        }
 
         try {
-            $tokenPayload = $this->logConsumerJwtIssuer->issueFromSourceApiKey((string) $sourceApiKey);
+            $tokenPayload = $this->logConsumerJwtIssuer->issueFromCredentials($sourceApiKey, $clientSecret);
         } catch (InvalidArgumentException $exception) {
             return new JsonResponse([
                 'error' => $exception->getMessage(),

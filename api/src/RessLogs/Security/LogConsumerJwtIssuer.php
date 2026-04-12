@@ -17,18 +17,36 @@ final class LogConsumerJwtIssuer implements LogConsumerJwtIssuerInterface
     ) {
     }
 
-    public function issueFromSourceApiKey(string $sourceApiKey): array
+    public function issueFromCredentials(string $sourceApiKey, string $clientSecret): array
     {
         $normalizedApiKey = trim($sourceApiKey);
-        if ($normalizedApiKey === '') {
-            throw new InvalidArgumentException('Le champ «sourceApiKey» est obligatoire.');
-        }
 
         $source = $this->logSourceRepository->findOneBy(['apiKey' => $normalizedApiKey, 'isActive' => true]);
+
+        // Si la source est introuvable, on fait quand même un hash dummy pour éviter
+        // les attaques par timing (timing-safe)
         if (!$source instanceof LogSource) {
-            throw new InvalidArgumentException('Source introuvable ou inactive pour cette api key.');
+            password_verify($clientSecret, '$argon2id$v=19$m=65536,t=4,p=1$dummysaltdummysalt$dummyhashvaluedummyhashvaluedummyhashvalue');
+            throw new InvalidArgumentException('Identifiants invalides.');
         }
 
+        $storedHash = $source->getClientSecret();
+        if ($storedHash === null) {
+            throw new InvalidArgumentException('Aucun secret configuré pour cette source. Contactez l\'administrateur.');
+        }
+
+        if (!password_verify($clientSecret, $storedHash)) {
+            throw new InvalidArgumentException('Identifiants invalides.');
+        }
+
+        return $this->issueForSource($source);
+    }
+
+    /**
+     * @return array{accessToken: string, expiresIn: int}
+     */
+    private function issueForSource(LogSource $source): array
+    {
         $now = time();
         $expiresIn = self::DEFAULT_TTL_SECONDS;
 
@@ -38,7 +56,6 @@ final class LogConsumerJwtIssuer implements LogConsumerJwtIssuerInterface
             'sourceName' => $source->getName(),
             'sourceType' => $source->getType(),
             'iat' => $now,
-            'nbf' => $now,
             'exp' => $now + $expiresIn,
         ]);
 

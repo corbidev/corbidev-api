@@ -17,15 +17,37 @@ Le module de logs permet d'enregistrer des événements applicatifs dans l'API v
 
 ## Endpoint
 
-### Requête token consommateur
+### Authentification pour obtenir un token JWT (client_credentials)
 
 - Méthode : `POST`
 - URL : `/api/logs/token`
-- Header recommandé :
+- Header requis :
   - `Content-Type: application/json`
-  - `x-api-key: <source_api_key>`
-- Body JSON possible :
-  - `sourceApiKey` (string)
+- Body JSON requis :
+  - `sourceApiKey` (string) — identifiant public de la source
+  - `clientSecret` (string) — secret propre au site, stocké haché en base
+
+Note : `clientSecret` est configuré par l'administrateur lors de la création de la source. Il est stocké en base sous forme de hash Argon2id, jamais en clair. Chaque site a son propre secret indépendant.
+
+### Gestion des secrets (commande Symfony)
+
+La commande `app:logs:set-source-secret` crée la source si elle n'existe pas, sinon met à jour son secret.
+
+Exemples :
+
+```bash
+php bin/console app:logs:set-source-secret ma-source-api-key --secret="mon-secret-long" --no-interaction
+```
+
+```bash
+php bin/console app:logs:set-source-secret ma-source-api-key --secret="mon-secret-long" --name="Mon Site" --type="backend" --no-interaction
+```
+
+Règles :
+
+- `sourceApiKey` est l'identifiant public de la source.
+- `clientSecret` est stocké haché en base (Argon2id).
+- si `sourceApiKey` n'existe pas, la source est créée (`name=sourceApiKey`, `type=backend`, active).
 
 Réponse succès (`201 Created`) :
 
@@ -183,7 +205,8 @@ curl -X POST "http://127.0.0.1:8000/api/logs" \
 curl -X POST "http://127.0.0.1:8000/api/logs/token" \
   -H "Content-Type: application/json" \
   -d '{
-    "sourceApiKey": "replace-with-valid-source-api-key"
+    "sourceApiKey": "identifiant-de-votre-site",
+    "clientSecret": "votre-secret-par-site"
   }'
 ```
 

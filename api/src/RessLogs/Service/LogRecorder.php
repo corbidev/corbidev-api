@@ -148,7 +148,7 @@ class LogRecorder implements LogRecorderInterface
             }
         }
 
-        throw new InvalidArgumentException('Source introuvable. Fournissez «sourceId» ou «sourceApiKey» valide.');
+        throw new InvalidArgumentException('Source introuvable. Vérifiez votre authentification (Bearer JWT) ou la configuration de la source émettrice.');
     }
 
     private function resolveUrlAndUri(CreateLogRequestDto $request, string $validatedUrl): array

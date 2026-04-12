@@ -27,6 +27,9 @@ class LogSource
     #[ORM\Column(name: 'api_key', length: 64, unique: true)]
     private ?string $apiKey = null;
 
+    #[ORM\Column(name: 'client_secret', length: 255, nullable: true)]
+    private ?string $clientSecret = null;
+
     #[ORM\Column(name: 'is_active', options: ['default' => true])]
     private bool $isActive = true;
 
@@ -81,6 +84,18 @@ class LogSource
     public function setApiKey(string $apiKey): static
     {
         $this->apiKey = $apiKey;
+
+        return $this;
+    }
+
+    public function getClientSecret(): ?string
+    {
+        return $this->clientSecret;
+    }
+
+    public function setClientSecret(?string $clientSecret): static
+    {
+        $this->clientSecret = $clientSecret;
 
         return $this;
     }

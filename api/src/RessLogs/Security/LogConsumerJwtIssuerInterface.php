@@ -7,5 +7,5 @@ interface LogConsumerJwtIssuerInterface
     /**
      * @return array{accessToken: string, expiresIn: int}
      */
-    public function issueFromSourceApiKey(string $sourceApiKey): array;
+    public function issueFromCredentials(string $sourceApiKey, string $clientSecret): array;
 }
