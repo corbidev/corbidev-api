@@ -9,12 +9,9 @@ final class CreateLogRequestMapper implements CreateLogRequestMapperInterface
     /**
      * @param array<string, mixed> $payload
      */
-    public function map(array $payload, ?string $apiKey = null): CreateLogRequestDto
+    public function map(array $payload, ?string $apiKey = null, ?int $sourceId = null): CreateLogRequestDto
     {
-        $sourceApiKey = $this->nullableString($payload['sourceApiKey'] ?? null);
-        if ($sourceApiKey === null && $apiKey !== null && trim($apiKey) !== '') {
-            $sourceApiKey = trim($apiKey);
-        }
+        $sourceApiKey = $apiKey !== null && trim($apiKey) !== '' ? trim($apiKey) : null;
 
         return new CreateLogRequestDto(
             message: trim((string) ($payload['message'] ?? '')),
@@ -28,13 +25,11 @@ final class CreateLogRequestMapper implements CreateLogRequestMapperInterface
             createdAt: $payload['createdAt'] ?? null,
             level: $this->nullableIntOrString($payload['level'] ?? null),
             env: $this->nullableIntOrString($payload['env'] ?? null),
-            sourceId: $this->nullableInt($payload['sourceId'] ?? null),
+            sourceId: $sourceId,
             sourceApiKey: $sourceApiKey,
             urlId: $this->nullableInt($payload['urlId'] ?? null),
             uriId: $this->nullableInt($payload['uriId'] ?? null),
             routeId: $this->nullableInt($payload['routeId'] ?? null),
-            routeUrl: $this->nullableString($payload['routeUrl'] ?? null),
-            routeUri: $this->nullableString($payload['routeUri'] ?? null),
             uri: $this->nullableString($payload['uri'] ?? null),
             tags: is_array($payload['tags'] ?? null) ? $payload['tags'] : null,
         );

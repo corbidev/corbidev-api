@@ -1,8 +1,8 @@
 <?php
 
-namespace App\RessLogs\Security;
+namespace App\RessAuth\Security;
 
-interface LogConsumerJwtIssuerInterface
+interface AccessTokenIssuerInterface
 {
     /**
      * @return array{accessToken: string, expiresIn: int}

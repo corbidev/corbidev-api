@@ -10,6 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: LogTagRepository::class)]
 #[ORM\Table(name: 'log_tag')]
+#[ORM\UniqueConstraint(name: 'name', columns: ['name'])]
 class LogTag
 {
     #[ORM\Id]
@@ -17,7 +18,7 @@ class LogTag
     #[ORM\Column(type: 'bigint')]
     private ?int $id = null;
 
-    #[ORM\Column(length: 50, unique: true)]
+    #[ORM\Column(length: 50)]
     private ?string $name = null;
 
     /**

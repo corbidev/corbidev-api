@@ -7,31 +7,28 @@ Le module de logs permet d'enregistrer des événements applicatifs dans l'API v
 - Endpoint : `POST /api/logs`
 - Contrôleur : `App\RessLogs\Controller\CreateLogController`
 - Service métier : `App\RessLogs\Service\LogRecorder`
+- Auth JWT mutualisée : voir `documentations/auth.md`
 
 ## Fonctionnement global
 
 - Le contrôleur reçoit un JSON.
-- Il récupère la clé source (`sourceApiKey`) depuis le body JSON, l'en-tête `x-api-key` ou un JWT dans l'en-tête `Authorization: Bearer <jwt>`.
+- Il exige un JWT valide dans l'en-tête `Authorization: Bearer <jwt>` et résout la source uniquement depuis ce token.
 - Le service `LogRecorder` valide et enrichit les données.
-- Le log est persisté en base (`log_entry`) avec ses relations (`log_level`, `log_env`, `log_source`, `log_url`, `log_uri`, `log_tag`, `log_entry_tag`).
+- Le log est persisté en base (`${SQL_PREFIXE}log_entry`) avec ses relations (`${SQL_PREFIXE}log_level`, `${SQL_PREFIXE}log_env`, `${SQL_PREFIXE}auth_credential`, `${SQL_PREFIXE}log_url`, `${SQL_PREFIXE}log_uri`, `${SQL_PREFIXE}log_tag`, `${SQL_PREFIXE}log_entry_tag`).
 
 ## Endpoint
 
 ### Authentification pour obtenir un token JWT (client_credentials)
 
-- Méthode : `POST`
-- URL : `/api/logs/token`
-- Header requis :
-  - `Content-Type: application/json`
-- Body JSON requis :
-  - `sourceApiKey` (string) — identifiant public de la source
-  - `clientSecret` (string) — secret propre au site, stocké haché en base
+- Le point d'entree principal est `POST /api/auth/token`.
+- L'ancienne URL `POST /api/logs/token` reste acceptee pour compatibilite.
+- Le detail de cette gestion est documente dans `documentations/auth.md`.
 
-Note : `clientSecret` est configuré par l'administrateur lors de la création de la source. Il est stocké en base sous forme de hash Argon2id, jamais en clair. Chaque site a son propre secret indépendant.
+Note : `clientSecret` est configuré par l'administrateur lors de la création de la source. Il est stocké en base dans la table `${SQL_PREFIXE}auth_credential` sous forme de hash Argon2id, jamais en clair. Cette meme table porte aussi le nom, le type et `api_key` de la source.
 
 ### Gestion des secrets (commande Symfony)
 
-La commande `app:logs:set-source-secret` crée la source si elle n'existe pas, sinon met à jour son secret.
+La commande `app:logs:set-source-secret` est maintenant implementée dans `App\RessAuth\Command\SetLogSourceSecretCommand`. Elle cree la source canonique si elle n'existe pas, sinon met a jour son secret.
 
 Exemples :
 
@@ -46,8 +43,8 @@ php bin/console app:logs:set-source-secret ma-source-api-key --secret="mon-secre
 Règles :
 
 - `sourceApiKey` est l'identifiant public de la source.
-- `clientSecret` est stocké haché en base (Argon2id).
-- si `sourceApiKey` n'existe pas, la source est créée (`name=sourceApiKey`, `type=backend`, active).
+- `clientSecret` est stocké haché en base (Argon2id) dans `${SQL_PREFIXE}auth_credential`.
+- si `sourceApiKey` n'existe pas, la source canonique est créée dans `${SQL_PREFIXE}auth_credential` (`name=sourceApiKey`, `type=backend`, active).
 
 Réponse succès (`201 Created`) :
 
@@ -63,23 +60,23 @@ Réponse succès (`201 Created`) :
 
 - Méthode : `POST`
 - URL : `/api/logs`
-- Header recommandé :
+- Header obligatoire :
   - `Content-Type: application/json`
-  - `x-api-key: <source_api_key>`
-  - ou `Authorization: Bearer <jwt>`
+  - `Authorization: Bearer <jwt>`
 
 ### Authentification JWT (consommateurs)
 
 - Le token JWT est validé (signature + expiration) via la configuration Lexik JWT.
-- Le token s'obtient via `POST /api/logs/token` avec une `sourceApiKey` active.
+- Le token s'obtient via `POST /api/auth/token` avec une `sourceApiKey` active.
 - Si le token est valide, la source est résolue via une claim contenant la clé API.
 - Claims supportées (dans cet ordre) :
   - `sourceApiKey`
   - `source_api_key`
   - `apiKey`
   - `api_key`
-- Si `x-api-key` est présent et non vide, il reste prioritaire.
+- Si le header `Authorization` est absent, la requête est rejetée en `400`.
 - Si le header `Authorization` est présent mais pas au format Bearer, la requête est rejetée en `400`.
+- Les champs `sourceApiKey` et `sourceId` sont interdits dans le body de `POST /api/logs` et provoquent une erreur `400`.
 
 ### Payload JSON
 
@@ -87,7 +84,6 @@ Réponse succès (`201 Created`) :
 
 - `message` (string)
 - `url` (string) — URL absolue valide (`http://...` ou `https://...`)
-- `sourceId` (int) **ou** `sourceApiKey` (string)
 
 #### Optionnel
 
@@ -104,8 +100,6 @@ Réponse succès (`201 Created`) :
 - `uriId` (int)
 - `routeId` (int)
 - `uri` (string)
-- `routeUrl` (string)
-- `routeUri` (string)
 - `tags` (array d'IDs ou de noms)
 
 ## Règles de résolution
@@ -113,17 +107,18 @@ Réponse succès (`201 Created`) :
 - `level` : recherche par id ou nom (`debug`, `info`, `warning`, `error`, `critical`).
 - `env` : recherche par id ou nom (`dev`, `test`, `prod`).
 - `source` :
-  - priorité à `sourceId`, sinon `sourceApiKey` (source active).
-  - `sourceApiKey` peut venir du body, de `x-api-key` ou d'un JWT Bearer.
+  - la source canonique active est résolue uniquement depuis les claims du JWT Bearer.
   - erreur si introuvable.
 - `url/uri` :
   - `url` est obligatoire et doit etre une URL absolue valide (`http` ou `https`).
   - `uriId` (ou `routeId` pour compatibilite) pointe vers une URI existante.
   - `urlId` pointe vers une URL existante.
-  - `uri`/`routeUri` permet de rechercher ou creer une URI.
-  - `url`/`routeUrl` permet de rechercher ou creer une URL.
+  - `uri` permet de rechercher ou creer une URI.
+  - `url` permet de rechercher ou creer une URL.
+  - si `url` contient deja un path, ce path est extrait automatiquement pour alimenter `uri`.
+  - si `url` contient un path et que `uri` est aussi fourni avec une valeur differente, la requete est rejetee.
   - une URI peut etre rattachee a une URL.
-  - si plus aucune `log_entry` ne reference une URI/URL, elle est supprimee automatiquement.
+  - si plus aucune `${SQL_PREFIXE}log_entry` ne reference une URI/URL, elle est supprimee automatiquement.
 - `tags` :
   - accepte id ou nom,
   - crée les tags manquants par nom,
@@ -148,6 +143,8 @@ Réponse succès (`201 Created`) :
 - `400 Bad Request` si :
   - JSON invalide,
   - body non objet JSON,
+  - header `Authorization` absent ou invalide,
+  - `sourceApiKey` ou `sourceId` présents dans le body,
   - champ obligatoire manquant,
   - référence métier introuvable (source/level/env/url/uri/tag id),
   - données invalides.
@@ -165,17 +162,16 @@ Exemple :
 ```bash
 curl -X POST "http://127.0.0.1:8000/api/logs" \
   -H "Content-Type: application/json" \
-  -H "x-api-key: replace-with-valid-source-api-key" \
+  -H "Authorization: Bearer <jwt_avec_claim_sourceApiKey>" \
   -d '{
-    "message": "Erreur sur endpoint /api/users",
-    "url": "https://api.corbisier.test/api/users",
+    "message": "Erreur sur endpoint /auth/users",
+    "url": "https://corbisier.test",
+    "uri": "/auth/users",
     "title": "API Error",
     "level": "error",
     "env": "dev",
     "httpStatus": 500,
     "durationMs": 231,
-    "routeUrl": "/api/users",
-    "routeUri": "/api/users",
     "context": {
       "method": "GET",
       "traceId": "trace-12345",
@@ -199,10 +195,12 @@ curl -X POST "http://127.0.0.1:8000/api/logs" \
   }'
 ```
 
+Dans cet exemple, l'API normalise automatiquement la requete en conservant `https://api.corbisier.test` comme URL et `/api/users` comme URI.
+
 ## Exemple de génération de token JWT
 
 ```bash
-curl -X POST "http://127.0.0.1:8000/api/logs/token" \
+curl -X POST "http://127.0.0.1:8000/api/auth/token" \
   -H "Content-Type: application/json" \
   -d '{
     "sourceApiKey": "identifiant-de-votre-site",
@@ -221,5 +219,6 @@ Une collection prête à l'import est disponible :
 
 - Le flush Doctrine est réalisé à chaque appel de `record()`.
 - `ts` et `createdAt` sont initialisés à `now` si absents.
+- `source_id` dans `${SQL_PREFIXE}log_entry` pointe directement vers `${SQL_PREFIXE}auth_credential`.
 - Le schéma SQL de référence est dans :
   - `database/sql/log.sql`

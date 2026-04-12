@@ -26,8 +26,8 @@
                             "",
                             "pm.test('Store JWT for next requests', function () {",
                             "  const body = pm.response.json();",
-                            "  pm.collectionVariables.set('jwtToken', body.access_token);",
-                            "  pm.collectionVariables.set('tokenExpiresIn', String(body.expires_in));",
+                            "  pm.environment.set('jwtToken', body.access_token);",
+                            "  pm.environment.set('tokenExpiresIn', String(body.expires_in));",
                             "});"
                         ]
                     }
@@ -50,7 +50,7 @@
                         }
                     }
                 },
-                "url": "{{baseUrl}}/api/logs/token"
+                "url": "{{baseUrl}}/api/auth/token"
             }
         },
         {
@@ -91,7 +91,7 @@
                         }
                     }
                 },
-                "url": "{{baseUrl}}/api/logs/token"
+                "url": "{{baseUrl}}/api/auth/token"
             }
         },
         {
@@ -129,7 +129,7 @@
                 ],
                 "body": {
                     "mode": "raw",
-                    "raw": "{\n  \"message\": \"Postman bearer test\",\n  \"url\": \"https://api.corbisier.test/api/test\",\n  \"level\": \"info\",\n  \"env\": \"dev\"\n}",
+                    "raw": "{\n  \"message\": \"Postman bearer test\",\n  \"url\": \"https://api.corbisier.test/api/test\",\n  \"uri\": \"/api/test\",\n  \"level\": \"info\",\n  \"env\": \"dev\"\n}",
                     "options": {
                         "raw": {
                             "language": "json"
@@ -152,14 +152,6 @@
         {
             "key": "clientSecret",
             "value": "mon-secret-long-1234"
-        },
-        {
-            "key": "jwtToken",
-            "value": ""
-        },
-        {
-            "key": "tokenExpiresIn",
-            "value": ""
         }
     ]
 }

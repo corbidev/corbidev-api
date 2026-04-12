@@ -1,17 +1,18 @@
 <?php
 
-namespace App\RessLogs\Entity;
+namespace App\RessAuth\Entity;
 
+use App\RessAuth\Repository\AuthCredentialRepository;
 use App\RessLogs\Entity\LogEntry;
-use App\RessLogs\Repository\LogSourceRepository;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity(repositoryClass: LogSourceRepository::class)]
-#[ORM\Table(name: 'log_source')]
-class LogSource
+#[ORM\Entity(repositoryClass: AuthCredentialRepository::class)]
+#[ORM\Table(name: 'auth_credential')]
+#[ORM\UniqueConstraint(name: 'api_key', columns: ['api_key'])]
+class AuthCredential
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -24,17 +25,20 @@ class LogSource
     #[ORM\Column(length: 50)]
     private ?string $type = null;
 
-    #[ORM\Column(name: 'api_key', length: 64, unique: true)]
+    #[ORM\Column(name: 'api_key', length: 64)]
     private ?string $apiKey = null;
 
-    #[ORM\Column(name: 'client_secret', length: 255, nullable: true)]
-    private ?string $clientSecret = null;
+    #[ORM\Column(name: 'client_secret_hash', length: 255)]
+    private ?string $clientSecretHash = null;
 
     #[ORM\Column(name: 'is_active', options: ['default' => true])]
     private bool $isActive = true;
 
     #[ORM\Column(name: 'created_at', type: 'datetime_immutable')]
     private ?DateTimeImmutable $createdAt = null;
+
+    #[ORM\Column(name: 'updated_at', type: 'datetime_immutable')]
+    private ?DateTimeImmutable $updatedAt = null;
 
     /**
      * @var Collection<int, LogEntry>
@@ -88,14 +92,14 @@ class LogSource
         return $this;
     }
 
-    public function getClientSecret(): ?string
+    public function getClientSecretHash(): ?string
     {
-        return $this->clientSecret;
+        return $this->clientSecretHash;
     }
 
-    public function setClientSecret(?string $clientSecret): static
+    public function setClientSecretHash(string $clientSecretHash): static
     {
-        $this->clientSecret = $clientSecret;
+        $this->clientSecretHash = $clientSecretHash;
 
         return $this;
     }
@@ -120,6 +124,18 @@ class LogSource
     public function setCreatedAt(DateTimeImmutable $createdAt): static
     {
         $this->createdAt = $createdAt;
+
+        return $this;
+    }
+
+    public function getUpdatedAt(): ?DateTimeImmutable
+    {
+        return $this->updatedAt;
+    }
+
+    public function setUpdatedAt(DateTimeImmutable $updatedAt): static
+    {
+        $this->updatedAt = $updatedAt;
 
         return $this;
     }

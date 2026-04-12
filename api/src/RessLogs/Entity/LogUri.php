@@ -9,6 +9,8 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: LogUriRepository::class)]
 #[ORM\Table(name: 'log_uri')]
+#[ORM\UniqueConstraint(name: 'uri', columns: ['uri'])]
+#[ORM\Index(name: 'idx_log_uri_url_id', columns: ['url_id'])]
 class LogUri
 {
     #[ORM\Id]
@@ -16,7 +18,7 @@ class LogUri
     #[ORM\Column(type: 'bigint')]
     private ?int $id = null;
 
-    #[ORM\Column(length: 255, unique: true)]
+    #[ORM\Column(length: 255)]
     private ?string $uri = null;
 
     #[ORM\ManyToOne(inversedBy: 'uris')]

@@ -1,34 +1,28 @@
 <?php
 
-namespace App\RessLogs\Security;
+namespace App\RessAuth\Security;
 
 use InvalidArgumentException;
 use Lexik\Bundle\JWTAuthenticationBundle\Exception\JWTDecodeFailureException;
 use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 
-final class LogConsumerJwtResolver implements LogConsumerJwtResolverInterface
+final class AccessTokenResolver implements AccessTokenResolverInterface
 {
     public function __construct(
         private readonly JWTTokenManagerInterface $jwtTokenManager,
     ) {
     }
 
-    /**
-     * @return array{sourceApiKey: ?string, sourceId: ?int}
-     */
-    public function resolveSourceContextFromRequest(Request $request): array
+    public function verifyRequest(Request $request): AccessTokenContext
     {
         $authorization = $request->headers->get('Authorization');
         if (!is_string($authorization) || trim($authorization) === '') {
-            return [
-                'sourceApiKey' => null,
-                'sourceId' => null,
-            ];
+            return new AccessTokenContext(null, null);
         }
 
         if (!preg_match('/^Bearer\s+(.+)$/i', $authorization, $matches)) {
-            throw new InvalidArgumentException('Le header Authorization doit utiliser le schéma Bearer.');
+            throw new InvalidArgumentException('Le header Authorization doit utiliser le schema Bearer.');
         }
 
         $jwt = trim($matches[1]);
@@ -39,7 +33,7 @@ final class LogConsumerJwtResolver implements LogConsumerJwtResolverInterface
         try {
             $payload = $this->jwtTokenManager->parse($jwt);
         } catch (JWTDecodeFailureException) {
-            throw new InvalidArgumentException('Token JWT invalide ou expiré.');
+            throw new InvalidArgumentException('Token JWT invalide ou expire.');
         }
 
         $sourceApiKey = null;
@@ -65,16 +59,24 @@ final class LogConsumerJwtResolver implements LogConsumerJwtResolverInterface
             }
         }
 
-        return [
-            'sourceApiKey' => $sourceApiKey,
-            'sourceId' => $sourceId,
-        ];
+        return new AccessTokenContext($sourceApiKey, $sourceId);
+    }
+
+    public function requireRequest(Request $request): AccessTokenContext
+    {
+        $context = $this->verifyRequest($request);
+
+        if ($context->sourceApiKey === null && $context->sourceId === null) {
+            throw new InvalidArgumentException('Le header Authorization avec un Bearer JWT valide est obligatoire.');
+        }
+
+        return $context;
     }
 
     public function resolveSourceApiKeyFromRequest(Request $request): ?string
     {
-        $context = $this->resolveSourceContextFromRequest($request);
+        $context = $this->verifyRequest($request);
 
-        return $context['sourceApiKey'];
+        return $context->sourceApiKey;
     }
 }

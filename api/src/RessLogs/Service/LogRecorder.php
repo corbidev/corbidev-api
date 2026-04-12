@@ -2,18 +2,18 @@
 
 namespace App\RessLogs\Service;
 
+use App\RessAuth\Entity\AuthCredential;
+use App\RessAuth\Repository\AuthCredentialRepository;
 use App\RessLogs\Dto\CreateLogRequestDto;
 use App\RessLogs\Entity\LogEntry;
 use App\RessLogs\Entity\LogEntryTag;
 use App\RessLogs\Entity\LogEnv;
 use App\RessLogs\Entity\LogLevel;
-use App\RessLogs\Entity\LogSource;
 use App\RessLogs\Entity\LogTag;
 use App\RessLogs\Entity\LogUri;
 use App\RessLogs\Entity\LogUrl;
 use App\RessLogs\Repository\LogEnvRepository;
 use App\RessLogs\Repository\LogLevelRepository;
-use App\RessLogs\Repository\LogSourceRepository;
 use App\RessLogs\Repository\LogTagRepository;
 use App\RessLogs\Repository\LogUriRepository;
 use App\RessLogs\Repository\LogUrlRepository;
@@ -27,7 +27,7 @@ class LogRecorder implements LogRecorderInterface
         private readonly EntityManagerInterface $entityManager,
         private readonly LogLevelRepository $logLevelRepository,
         private readonly LogEnvRepository $logEnvRepository,
-        private readonly LogSourceRepository $logSourceRepository,
+        private readonly AuthCredentialRepository $authCredentialRepository,
         private readonly LogUriRepository $logUriRepository,
         private readonly LogUrlRepository $logUrlRepository,
         private readonly LogTagRepository $logTagRepository,
@@ -129,21 +129,21 @@ class LogRecorder implements LogRecorderInterface
         return $entity;
     }
 
-    private function resolveSource(CreateLogRequestDto $request): LogSource
+    private function resolveSource(CreateLogRequestDto $request): AuthCredential
     {
         $sourceId = $request->sourceId;
         $sourceApiKey = $request->sourceApiKey;
 
         if ($sourceId !== null) {
-            $source = $this->logSourceRepository->find((int) $sourceId);
-            if ($source instanceof LogSource) {
+            $source = $this->authCredentialRepository->find((int) $sourceId);
+            if ($source instanceof AuthCredential) {
                 return $source;
             }
         }
 
         if (is_string($sourceApiKey) && $sourceApiKey !== '') {
-            $source = $this->logSourceRepository->findOneBy(['apiKey' => $sourceApiKey, 'isActive' => true]);
-            if ($source instanceof LogSource) {
+            $source = $this->authCredentialRepository->findOneBy(['apiKey' => $sourceApiKey, 'isActive' => true]);
+            if ($source instanceof AuthCredential) {
                 return $source;
             }
         }
@@ -157,7 +157,7 @@ class LogRecorder implements LogRecorderInterface
         $uriId = $request->uriId ?? $request->routeId;
 
         $urlValue = $validatedUrl;
-        $uriValue = $request->uri ?? $request->routeUri;
+        $uriValue = $request->uri;
 
         [$urlValue, $uriValue] = $this->normalizeUrlAndUriValues($urlValue, $uriValue);
 
@@ -206,7 +206,7 @@ class LogRecorder implements LogRecorderInterface
         }
 
         if ($uri instanceof LogUri && !$url instanceof LogUrl) {
-            throw new InvalidArgumentException('Une URI doit être rattachée à une URL. Fournissez "url"/"routeUrl" ou "urlId".');
+            throw new InvalidArgumentException('Une URI doit être rattachée à une URL. Fournissez "url" ou "urlId".');
         }
 
         if ($uri instanceof LogUri && $url instanceof LogUrl && $uri->getUrl() === null) {
@@ -224,11 +224,15 @@ class LogRecorder implements LogRecorderInterface
 
         $extractedUri = $this->extractUriFromUrlValue($urlValue);
 
+        if ($extractedUri !== null && $uriValue !== null && $uriValue !== $extractedUri) {
+            throw new InvalidArgumentException('Le champ "url" ne doit pas contenir une URI differente de celle fournie dans "uri".');
+        }
+
         if ($uriValue === null && $extractedUri !== null) {
             $uriValue = $extractedUri;
         }
 
-        if ($uriValue !== null && $extractedUri !== null) {
+        if ($extractedUri !== null) {
             $urlValue = $this->stripUriFromUrlValue($urlValue);
         }
 

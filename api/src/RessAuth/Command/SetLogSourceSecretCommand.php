@@ -1,9 +1,9 @@
 <?php
 
-namespace App\RessLogs\Command;
+namespace App\RessAuth\Command;
 
-use App\RessLogs\Entity\LogSource;
-use App\RessLogs\Repository\LogSourceRepository;
+use App\RessAuth\Entity\AuthCredential;
+use App\RessAuth\Repository\AuthCredentialRepository;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -17,12 +17,12 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
     name: 'app:logs:set-source-secret',
-    description: 'Crée ou met à jour le clientSecret d\'une LogSource (stocké en Argon2id).',
+    description: 'Crée ou met à jour une source canonique et son clientSecret dans la table auth unique (stocké en Argon2id).',
 )]
 final class SetLogSourceSecretCommand extends Command
 {
     public function __construct(
-        private readonly LogSourceRepository $logSourceRepository,
+        private readonly AuthCredentialRepository $authCredentialRepository,
         private readonly EntityManagerInterface $entityManager,
     ) {
         parent::__construct();
@@ -31,10 +31,10 @@ final class SetLogSourceSecretCommand extends Command
     protected function configure(): void
     {
         $this
-                ->addArgument('sourceApiKey', InputArgument::REQUIRED, 'La sourceApiKey (identifiant public) de la source à configurer.')
+            ->addArgument('sourceApiKey', InputArgument::REQUIRED, 'La sourceApiKey (identifiant public) de la source à configurer.')
             ->addOption('secret', null, InputOption::VALUE_REQUIRED, 'Secret à définir (si omis, un secret aléatoire est généré et affiché une seule fois).')
-                ->addOption('name', null, InputOption::VALUE_REQUIRED, 'Nom de la source si elle doit être créée (par défaut: sourceApiKey).')
-                ->addOption('type', null, InputOption::VALUE_REQUIRED, 'Type de la source si elle doit être créée (par défaut: backend).')
+            ->addOption('name', null, InputOption::VALUE_REQUIRED, 'Nom de la source si elle doit être créée (par défaut: sourceApiKey).')
+            ->addOption('type', null, InputOption::VALUE_REQUIRED, 'Type de la source si elle doit être créée (par défaut: backend).')
             ->addOption('show', null, InputOption::VALUE_NONE, 'Affiche le secret généré en clair après enregistrement (à copier immédiatement, non stocké en clair).');
     }
 
@@ -44,27 +44,29 @@ final class SetLogSourceSecretCommand extends Command
 
         $sourceApiKey = (string) $input->getArgument('sourceApiKey');
 
-        $source = $this->logSourceRepository->findOneBy(['apiKey' => $sourceApiKey]);
+        $source = $this->authCredentialRepository->findOneBy(['apiKey' => $sourceApiKey]);
         $created = false;
-        if (!$source instanceof LogSource) {
+        if (!$source instanceof AuthCredential) {
             /** @var string|null $nameOption */
             $nameOption = $input->getOption('name');
             /** @var string|null $typeOption */
             $typeOption = $input->getOption('type');
 
-            $source = new LogSource();
+            $source = new AuthCredential();
             $source
                 ->setApiKey($sourceApiKey)
                 ->setName($nameOption !== null && trim($nameOption) !== '' ? trim($nameOption) : $sourceApiKey)
                 ->setType($typeOption !== null && trim($typeOption) !== '' ? trim($typeOption) : 'backend')
                 ->setIsActive(true)
-                ->setCreatedAt(new DateTimeImmutable());
+                ->setCreatedAt(new DateTimeImmutable())
+                ->setUpdatedAt(new DateTimeImmutable());
 
             $this->entityManager->persist($source);
             $created = true;
         }
 
-        $io->title(sprintf('Source : %s (id: %d, type: %s, active: %s)', $source->getName(), $source->getId(), $source->getType(), $source->isActive() ? 'oui' : 'non'));
+        $sourceIdentifier = $source->getId() ?? 'nouvelle';
+        $io->title(sprintf('Source : %s (id: %s, type: %s, active: %s)', $source->getName(), (string) $sourceIdentifier, $source->getType(), $source->isActive() ? 'oui' : 'non'));
 
         /** @var string|null $secret */
         $secret = $input->getOption('secret');
@@ -94,10 +96,14 @@ final class SetLogSourceSecretCommand extends Command
         }
 
         $hash = password_hash($secret, PASSWORD_ARGON2ID);
-        $source->setClientSecret($hash);
+
+        $source
+            ->setClientSecretHash($hash)
+            ->setUpdatedAt(new DateTimeImmutable());
+
         $this->entityManager->flush();
 
-        $io->success($created ? 'Source créée et clientSecret défini avec succès.' : 'clientSecret mis à jour avec succès.');
+        $io->success($created ? 'Source auth créée et secret défini avec succès.' : 'Secret de la source auth mis à jour avec succès.');
 
         if ($generated || $input->getOption('show')) {
             $io->caution('Secret en clair (à copier immédiatement, il ne sera plus accessible) :');

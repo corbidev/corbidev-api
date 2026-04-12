@@ -1,22 +1,23 @@
 <?php
 
-namespace App\RessLogs\Controller;
+namespace App\RessAuth\Controller;
 
-use App\RessLogs\Security\LogConsumerJwtIssuerInterface;
+use App\RessAuth\Security\AccessTokenIssuerInterface;
 use InvalidArgumentException;
 use JsonException;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Attribute\Route;
 
-final class CreateLogTokenController
+final class CreateAccessTokenController
 {
     public function __construct(
-        private readonly LogConsumerJwtIssuerInterface $logConsumerJwtIssuer,
+        private readonly AccessTokenIssuerInterface $accessTokenIssuer,
     ) {
     }
 
-    #[Route('/api/logs/token', name: 'api_logs_token_create', methods: ['POST'])]
+    #[Route('/api/auth/token', name: 'api_auth_token_create', methods: ['POST'])]
+    #[Route('/api/logs/token', name: 'api_logs_token_create_legacy', methods: ['POST'])]
     public function __invoke(Request $request): JsonResponse
     {
         try {
@@ -29,7 +30,7 @@ final class CreateLogTokenController
 
         if (!is_array($payload)) {
             return new JsonResponse([
-                'error' => 'Le corps de la requête doit être un objet JSON.',
+                'error' => 'Le corps de la requête doit etre un objet JSON.',
             ], JsonResponse::HTTP_BAD_REQUEST);
         }
 
@@ -49,7 +50,7 @@ final class CreateLogTokenController
         }
 
         try {
-            $tokenPayload = $this->logConsumerJwtIssuer->issueFromCredentials($sourceApiKey, $clientSecret);
+            $tokenPayload = $this->accessTokenIssuer->issueFromCredentials($sourceApiKey, $clientSecret);
         } catch (InvalidArgumentException $exception) {
             return new JsonResponse([
                 'error' => $exception->getMessage(),

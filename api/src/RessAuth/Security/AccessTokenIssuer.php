@@ -1,18 +1,18 @@
 <?php
 
-namespace App\RessLogs\Security;
+namespace App\RessAuth\Security;
 
-use App\RessLogs\Entity\LogSource;
-use App\RessLogs\Repository\LogSourceRepository;
+use App\RessAuth\Entity\AuthCredential;
+use App\RessAuth\Repository\AuthCredentialRepository;
 use InvalidArgumentException;
 use Lexik\Bundle\JWTAuthenticationBundle\Encoder\JWTEncoderInterface;
 
-final class LogConsumerJwtIssuer implements LogConsumerJwtIssuerInterface
+final class AccessTokenIssuer implements AccessTokenIssuerInterface
 {
     private const DEFAULT_TTL_SECONDS = 3600;
 
     public function __construct(
-        private readonly LogSourceRepository $logSourceRepository,
+        private readonly AuthCredentialRepository $authCredentialRepository,
         private readonly JWTEncoderInterface $jwtEncoder,
     ) {
     }
@@ -21,31 +21,29 @@ final class LogConsumerJwtIssuer implements LogConsumerJwtIssuerInterface
     {
         $normalizedApiKey = trim($sourceApiKey);
 
-        $source = $this->logSourceRepository->findOneBy(['apiKey' => $normalizedApiKey, 'isActive' => true]);
+        $credential = $this->authCredentialRepository->findActiveOneBySourceApiKey($normalizedApiKey);
 
-        // Si la source est introuvable, on fait quand même un hash dummy pour éviter
-        // les attaques par timing (timing-safe)
-        if (!$source instanceof LogSource) {
+        if (!$credential instanceof AuthCredential) {
             password_verify($clientSecret, '$argon2id$v=19$m=65536,t=4,p=1$dummysaltdummysalt$dummyhashvaluedummyhashvaluedummyhashvalue');
             throw new InvalidArgumentException('Identifiants invalides.');
         }
 
-        $storedHash = $source->getClientSecret();
-        if ($storedHash === null) {
-            throw new InvalidArgumentException('Aucun secret configuré pour cette source. Contactez l\'administrateur.');
+        $storedHash = $credential->getClientSecretHash();
+        if ($storedHash === null || $storedHash === '') {
+            throw new InvalidArgumentException('Aucun secret configure pour cette source. Contactez l\'administrateur.');
         }
 
         if (!password_verify($clientSecret, $storedHash)) {
             throw new InvalidArgumentException('Identifiants invalides.');
         }
 
-        return $this->issueForSource($source);
+        return $this->issueForSource($credential);
     }
 
     /**
      * @return array{accessToken: string, expiresIn: int}
      */
-    private function issueForSource(LogSource $source): array
+    private function issueForSource(AuthCredential $source): array
     {
         $now = time();
         $expiresIn = self::DEFAULT_TTL_SECONDS;

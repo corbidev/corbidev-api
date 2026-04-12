@@ -7,6 +7,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: LogEntryTagRepository::class)]
 #[ORM\Table(name: 'log_entry_tag')]
+#[ORM\Index(name: 'fk_tag', columns: ['tag_id'])]
 class LogEntryTag
 {
     #[ORM\Id]
