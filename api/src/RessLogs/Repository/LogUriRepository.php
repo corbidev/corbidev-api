@@ -3,6 +3,7 @@
 namespace App\RessLogs\Repository;
 
 use App\RessLogs\Entity\LogUri;
+use App\RessLogs\RessLogsConstants;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -18,11 +19,6 @@ class LogUriRepository extends ServiceEntityRepository
 
     public function deleteOrphans(): void
     {
-        $this->getEntityManager()->createQuery(
-            'DELETE FROM App\\RessLogs\\Entity\\LogUri u
-             WHERE NOT EXISTS (
-                SELECT 1 FROM App\\RessLogs\\Entity\\LogEntry e WHERE e.uri = u
-             )'
-        )->execute();
+        $this->getEntityManager()->createQuery(RessLogsConstants::DQL_DELETE_ORPHAN_URIS)->execute();
     }
 }

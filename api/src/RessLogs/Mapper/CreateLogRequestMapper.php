@@ -3,40 +3,36 @@
 namespace App\RessLogs\Mapper;
 
 use App\RessLogs\Dto\CreateLogRequestDto;
+use App\RessLogs\RessLogsConstants;
 
 final class CreateLogRequestMapper implements CreateLogRequestMapperInterface
 {
     /**
      * @param array<string, mixed> $payload
      */
-    public function map(array $payload, ?string $apiKey = null): CreateLogRequestDto
+    public function map(array $payload, ?string $apiKey = null, ?int $sourceId = null): CreateLogRequestDto
     {
-        $sourceApiKey = $this->nullableString($payload['sourceApiKey'] ?? null);
-        if ($sourceApiKey === null && $apiKey !== null && trim($apiKey) !== '') {
-            $sourceApiKey = trim($apiKey);
-        }
+        $sourceApiKey = $apiKey !== null && trim($apiKey) !== RessLogsConstants::EMPTY_STRING ? trim($apiKey) : null;
 
         return new CreateLogRequestDto(
-            message: trim((string) ($payload['message'] ?? '')),
-            title: $this->nullableString($payload['title'] ?? null),
-            url: $this->nullableString($payload['url'] ?? null),
-            httpStatus: $this->nullableInt($payload['httpStatus'] ?? null),
-            durationMs: $this->nullableInt($payload['durationMs'] ?? null),
-            fingerprint: $this->nullableString($payload['fingerprint'] ?? null),
-            context: is_array($payload['context'] ?? null) ? $payload['context'] : null,
-            ts: $payload['ts'] ?? null,
-            createdAt: $payload['createdAt'] ?? null,
-            level: $this->nullableIntOrString($payload['level'] ?? null),
-            env: $this->nullableIntOrString($payload['env'] ?? null),
-            sourceId: $this->nullableInt($payload['sourceId'] ?? null),
+            message: trim((string) ($payload[RessLogsConstants::FIELD_MESSAGE] ?? RessLogsConstants::EMPTY_STRING)),
+            title: $this->nullableString($payload[RessLogsConstants::FIELD_TITLE] ?? null),
+            url: $this->nullableString($payload[RessLogsConstants::FIELD_URL] ?? null),
+            httpStatus: $this->nullableInt($payload[RessLogsConstants::FIELD_HTTP_STATUS] ?? null),
+            durationMs: $this->nullableInt($payload[RessLogsConstants::FIELD_DURATION_MS] ?? null),
+            fingerprint: $this->nullableString($payload[RessLogsConstants::FIELD_FINGERPRINT] ?? null),
+            context: is_array($payload[RessLogsConstants::FIELD_CONTEXT] ?? null) ? $payload[RessLogsConstants::FIELD_CONTEXT] : null,
+            ts: $payload[RessLogsConstants::FIELD_TS] ?? null,
+            createdAt: $payload[RessLogsConstants::FIELD_CREATED_AT] ?? null,
+            level: $this->nullableIntOrString($payload[RessLogsConstants::FIELD_LEVEL] ?? null),
+            env: $this->nullableIntOrString($payload[RessLogsConstants::FIELD_ENV] ?? null),
+            sourceId: $sourceId,
             sourceApiKey: $sourceApiKey,
-            urlId: $this->nullableInt($payload['urlId'] ?? null),
-            uriId: $this->nullableInt($payload['uriId'] ?? null),
-            routeId: $this->nullableInt($payload['routeId'] ?? null),
-            routeUrl: $this->nullableString($payload['routeUrl'] ?? null),
-            routeUri: $this->nullableString($payload['routeUri'] ?? null),
-            uri: $this->nullableString($payload['uri'] ?? null),
-            tags: is_array($payload['tags'] ?? null) ? $payload['tags'] : null,
+            urlId: $this->nullableInt($payload[RessLogsConstants::FIELD_URL_ID] ?? null),
+            uriId: $this->nullableInt($payload[RessLogsConstants::FIELD_URI_ID] ?? null),
+            routeId: $this->nullableInt($payload[RessLogsConstants::FIELD_ROUTE_ID] ?? null),
+            uri: $this->nullableString($payload[RessLogsConstants::FIELD_URI] ?? null),
+            tags: is_array($payload[RessLogsConstants::FIELD_TAGS] ?? null) ? $payload[RessLogsConstants::FIELD_TAGS] : null,
         );
     }
 
@@ -48,12 +44,12 @@ final class CreateLogRequestMapper implements CreateLogRequestMapperInterface
 
         $stringValue = trim((string) $value);
 
-        return $stringValue === '' ? null : $stringValue;
+        return $stringValue === RessLogsConstants::EMPTY_STRING ? null : $stringValue;
     }
 
     private function nullableInt(mixed $value): ?int
     {
-        if ($value === null || $value === '') {
+        if ($value === null || $value === RessLogsConstants::EMPTY_STRING) {
             return null;
         }
 

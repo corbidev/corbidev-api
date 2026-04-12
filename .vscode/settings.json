@@ -4,6 +4,10 @@
         "/^php bin/console doctrine:migrations:migrate --no-interaction ; php bin/console doctrine:migrations:status --no-interaction$/": {
             "approve": true,
             "matchCommandLine": true
+        },
+        "/^php bin/console lexik:jwt:generate-keypair --skip-if-exists$/": {
+            "approve": true,
+            "matchCommandLine": true
         }
     }
 }

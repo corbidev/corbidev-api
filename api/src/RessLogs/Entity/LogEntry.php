@@ -2,6 +2,7 @@
 
 namespace App\RessLogs\Entity;
 
+use App\RessAuth\Entity\AuthCredential;
 use App\RessLogs\Entity\LogUri;
 use App\RessLogs\Entity\LogUrl;
 use App\RessLogs\Repository\LogEntryRepository;
@@ -17,6 +18,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(name: 'idx_source', columns: ['source_id'])]
 #[ORM\Index(name: 'idx_env', columns: ['env_id'])]
 #[ORM\Index(name: 'idx_fingerprint', columns: ['fingerprint'])]
+#[ORM\Index(name: 'idx_url_id', columns: ['url_id'])]
+#[ORM\Index(name: 'idx_uri_id', columns: ['uri_id'])]
 #[ORM\Index(name: 'idx_level_ts', columns: ['level_id', 'ts'])]
 #[ORM\Index(name: 'idx_source_ts', columns: ['source_id', 'ts'])]
 #[ORM\Index(name: 'idx_env_ts', columns: ['env_id', 'ts'])]
@@ -36,7 +39,7 @@ class LogEntry
 
     #[ORM\ManyToOne(inversedBy: 'entries')]
     #[ORM\JoinColumn(name: 'source_id', referencedColumnName: 'id', nullable: false)]
-    private ?LogSource $source = null;
+    private ?AuthCredential $source = null;
 
     #[ORM\ManyToOne(inversedBy: 'entries')]
     #[ORM\JoinColumn(name: 'env_id', referencedColumnName: 'id', nullable: false)]
@@ -53,7 +56,7 @@ class LogEntry
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $title = null;
 
-    #[ORM\Column(type: 'text')]
+    #[ORM\Column(type: 'text', columnDefinition: 'TEXT NOT NULL')]
     private ?string $message = null;
 
     #[ORM\Column(name: 'http_status', type: 'smallint', nullable: true)]
@@ -111,12 +114,12 @@ class LogEntry
         return $this;
     }
 
-    public function getSource(): ?LogSource
+    public function getSource(): ?AuthCredential
     {
         return $this->source;
     }
 
-    public function setSource(?LogSource $source): static
+    public function setSource(?AuthCredential $source): static
     {
         $this->source = $source;
 

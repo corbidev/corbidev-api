@@ -9,5 +9,5 @@ interface CreateLogRequestMapperInterface
     /**
      * @param array<string, mixed> $payload
      */
-    public function map(array $payload, ?string $apiKey = null): CreateLogRequestDto;
+    public function map(array $payload, ?string $apiKey = null, ?int $sourceId = null): CreateLogRequestDto;
 }

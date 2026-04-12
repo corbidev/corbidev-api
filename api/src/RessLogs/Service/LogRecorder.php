@@ -2,18 +2,19 @@
 
 namespace App\RessLogs\Service;
 
+use App\RessAuth\Entity\AuthCredential;
+use App\RessAuth\Repository\AuthCredentialRepository;
 use App\RessLogs\Dto\CreateLogRequestDto;
 use App\RessLogs\Entity\LogEntry;
 use App\RessLogs\Entity\LogEntryTag;
 use App\RessLogs\Entity\LogEnv;
 use App\RessLogs\Entity\LogLevel;
-use App\RessLogs\Entity\LogSource;
 use App\RessLogs\Entity\LogTag;
 use App\RessLogs\Entity\LogUri;
 use App\RessLogs\Entity\LogUrl;
+use App\RessLogs\RessLogsConstants;
 use App\RessLogs\Repository\LogEnvRepository;
 use App\RessLogs\Repository\LogLevelRepository;
-use App\RessLogs\Repository\LogSourceRepository;
 use App\RessLogs\Repository\LogTagRepository;
 use App\RessLogs\Repository\LogUriRepository;
 use App\RessLogs\Repository\LogUrlRepository;
@@ -27,7 +28,7 @@ class LogRecorder implements LogRecorderInterface
         private readonly EntityManagerInterface $entityManager,
         private readonly LogLevelRepository $logLevelRepository,
         private readonly LogEnvRepository $logEnvRepository,
-        private readonly LogSourceRepository $logSourceRepository,
+        private readonly AuthCredentialRepository $authCredentialRepository,
         private readonly LogUriRepository $logUriRepository,
         private readonly LogUrlRepository $logUrlRepository,
         private readonly LogTagRepository $logTagRepository,
@@ -38,16 +39,16 @@ class LogRecorder implements LogRecorderInterface
     {
         $message = trim($request->message);
         if ($message === '') {
-            throw new InvalidArgumentException('Le champ «message» est obligatoire.');
+            throw new InvalidArgumentException(RessLogsConstants::ERROR_MESSAGE_REQUIRED);
         }
 
         $urlValue = $this->nullableString($request->url);
         if ($urlValue === null) {
-            throw new InvalidArgumentException('Le champ «url» est obligatoire.');
+            throw new InvalidArgumentException(RessLogsConstants::ERROR_URL_REQUIRED);
         }
 
         if (!$this->isStandardUrl($urlValue)) {
-            throw new InvalidArgumentException('Le champ «url» doit être une URL valide (http/https).');
+            throw new InvalidArgumentException(RessLogsConstants::ERROR_URL_INVALID);
         }
 
         $level = $this->resolveLevel($request->level);
@@ -98,15 +99,15 @@ class LogRecorder implements LogRecorderInterface
     private function resolveLevel(int|string|null $level): LogLevel
     {
         if ($level === null) {
-            $level = 200;
+            $level = RessLogsConstants::DEFAULT_LEVEL_ID;
         }
 
         $entity = is_int($level)
             ? $this->logLevelRepository->find($level)
-            : $this->logLevelRepository->findOneBy(['name' => (string) $level]);
+            : $this->logLevelRepository->findOneBy([RessLogsConstants::FIELD_NAME => (string) $level]);
 
         if (!$entity instanceof LogLevel) {
-            throw new InvalidArgumentException(sprintf('Niveau de log introuvable: %s', (string) $level));
+            throw new InvalidArgumentException(sprintf(RessLogsConstants::ERROR_LEVEL_NOT_FOUND, (string) $level));
         }
 
         return $entity;
@@ -115,40 +116,40 @@ class LogRecorder implements LogRecorderInterface
     private function resolveEnv(int|string|null $env): LogEnv
     {
         if ($env === null) {
-            $env = 1;
+            $env = RessLogsConstants::DEFAULT_ENV_ID;
         }
 
         $entity = is_int($env)
             ? $this->logEnvRepository->find($env)
-            : $this->logEnvRepository->findOneBy(['name' => (string) $env]);
+            : $this->logEnvRepository->findOneBy([RessLogsConstants::FIELD_NAME => (string) $env]);
 
         if (!$entity instanceof LogEnv) {
-            throw new InvalidArgumentException(sprintf('Environnement introuvable: %s', (string) $env));
+            throw new InvalidArgumentException(sprintf(RessLogsConstants::ERROR_ENV_NOT_FOUND, (string) $env));
         }
 
         return $entity;
     }
 
-    private function resolveSource(CreateLogRequestDto $request): LogSource
+    private function resolveSource(CreateLogRequestDto $request): AuthCredential
     {
         $sourceId = $request->sourceId;
         $sourceApiKey = $request->sourceApiKey;
 
         if ($sourceId !== null) {
-            $source = $this->logSourceRepository->find((int) $sourceId);
-            if ($source instanceof LogSource) {
+            $source = $this->authCredentialRepository->find((int) $sourceId);
+            if ($source instanceof AuthCredential) {
                 return $source;
             }
         }
 
         if (is_string($sourceApiKey) && $sourceApiKey !== '') {
-            $source = $this->logSourceRepository->findOneBy(['apiKey' => $sourceApiKey, 'isActive' => true]);
-            if ($source instanceof LogSource) {
+            $source = $this->authCredentialRepository->findOneBy([RessLogsConstants::FIELD_API_KEY => $sourceApiKey, RessLogsConstants::FIELD_IS_ACTIVE => true]);
+            if ($source instanceof AuthCredential) {
                 return $source;
             }
         }
 
-        throw new InvalidArgumentException('Source introuvable. Fournissez «sourceId» ou «sourceApiKey» valide.');
+        throw new InvalidArgumentException(RessLogsConstants::ERROR_SOURCE_NOT_FOUND);
     }
 
     private function resolveUrlAndUri(CreateLogRequestDto $request, string $validatedUrl): array
@@ -157,7 +158,7 @@ class LogRecorder implements LogRecorderInterface
         $uriId = $request->uriId ?? $request->routeId;
 
         $urlValue = $validatedUrl;
-        $uriValue = $request->uri ?? $request->routeUri;
+        $uriValue = $request->uri;
 
         [$urlValue, $uriValue] = $this->normalizeUrlAndUriValues($urlValue, $uriValue);
 
@@ -165,12 +166,12 @@ class LogRecorder implements LogRecorderInterface
         if ($urlId !== null) {
             $url = $this->logUrlRepository->find((int) $urlId);
             if (!$url instanceof LogUrl) {
-                throw new InvalidArgumentException(sprintf('URL introuvable pour l\'id %s.', (string) $urlId));
+                throw new InvalidArgumentException(sprintf(RessLogsConstants::ERROR_URL_ID_NOT_FOUND, (string) $urlId));
             }
         }
 
         if ($url === null && $urlValue !== null) {
-            $url = $this->logUrlRepository->findOneBy(['url' => $urlValue]);
+            $url = $this->logUrlRepository->findOneBy([RessLogsConstants::FIELD_URL => $urlValue]);
             if (!$url instanceof LogUrl) {
                 $url = new LogUrl();
                 $url->setUrl($urlValue);
@@ -182,12 +183,12 @@ class LogRecorder implements LogRecorderInterface
         if ($uriId !== null) {
             $uri = $this->logUriRepository->find((int) $uriId);
             if (!$uri instanceof LogUri) {
-                throw new InvalidArgumentException(sprintf('URI introuvable pour l\'id %s.', (string) $uriId));
+                throw new InvalidArgumentException(sprintf(RessLogsConstants::ERROR_URI_ID_NOT_FOUND, (string) $uriId));
             }
         }
 
         if ($uri === null && $uriValue !== null) {
-            $uri = $this->logUriRepository->findOneBy(['uri' => $uriValue]);
+            $uri = $this->logUriRepository->findOneBy([RessLogsConstants::FIELD_URI => $uriValue]);
             if (!$uri instanceof LogUri) {
                 $uri = new LogUri();
                 $uri->setUri($uriValue);
@@ -197,7 +198,7 @@ class LogRecorder implements LogRecorderInterface
 
         if ($uri instanceof LogUri && $uri->getUrl() instanceof LogUrl) {
             if ($url instanceof LogUrl && $uri->getUrl()->getId() !== $url->getId()) {
-                throw new InvalidArgumentException('Incoherence entre URL et URI: cette URI est deja rattachée a une autre URL.');
+                throw new InvalidArgumentException(RessLogsConstants::ERROR_URI_URL_CONFLICT);
             }
 
             if (!$url instanceof LogUrl) {
@@ -206,7 +207,7 @@ class LogRecorder implements LogRecorderInterface
         }
 
         if ($uri instanceof LogUri && !$url instanceof LogUrl) {
-            throw new InvalidArgumentException('Une URI doit être rattachée à une URL. Fournissez "url"/"routeUrl" ou "urlId".');
+            throw new InvalidArgumentException(RessLogsConstants::ERROR_URI_REQUIRES_URL);
         }
 
         if ($uri instanceof LogUri && $url instanceof LogUrl && $uri->getUrl() === null) {
@@ -224,11 +225,15 @@ class LogRecorder implements LogRecorderInterface
 
         $extractedUri = $this->extractUriFromUrlValue($urlValue);
 
+        if ($extractedUri !== null && $uriValue !== null && $uriValue !== $extractedUri) {
+            throw new InvalidArgumentException(RessLogsConstants::ERROR_URL_URI_MISMATCH);
+        }
+
         if ($uriValue === null && $extractedUri !== null) {
             $uriValue = $extractedUri;
         }
 
-        if ($uriValue !== null && $extractedUri !== null) {
+        if ($extractedUri !== null) {
             $urlValue = $this->stripUriFromUrlValue($urlValue);
         }
 
@@ -237,7 +242,7 @@ class LogRecorder implements LogRecorderInterface
 
     private function extractUriFromUrlValue(string $urlValue): ?string
     {
-        if (str_starts_with($urlValue, '/')) {
+        if (str_starts_with($urlValue, RessLogsConstants::URI_PATH_SEPARATOR)) {
             return $urlValue;
         }
 
@@ -246,7 +251,7 @@ class LogRecorder implements LogRecorderInterface
         }
 
         $path = parse_url($urlValue, PHP_URL_PATH);
-        if (!is_string($path) || $path === '' || $path === '/') {
+        if (!is_string($path) || $path === RessLogsConstants::EMPTY_STRING || $path === RessLogsConstants::URI_PATH_SEPARATOR) {
             return null;
         }
 
@@ -255,7 +260,7 @@ class LogRecorder implements LogRecorderInterface
 
     private function stripUriFromUrlValue(string $urlValue): ?string
     {
-        if (str_starts_with($urlValue, '/')) {
+        if (str_starts_with($urlValue, RessLogsConstants::URI_PATH_SEPARATOR)) {
             return null;
         }
 
@@ -268,20 +273,20 @@ class LogRecorder implements LogRecorderInterface
             return $urlValue;
         }
 
-        $normalized = sprintf('%s://', $parts['scheme']);
+        $normalized = sprintf('%s' . RessLogsConstants::URL_SCHEME_SUFFIX, $parts['scheme']);
 
         if (isset($parts['user'])) {
             $normalized .= $parts['user'];
             if (isset($parts['pass'])) {
-                $normalized .= ':' . $parts['pass'];
+                $normalized .= RessLogsConstants::URL_PASSWORD_SEPARATOR . $parts['pass'];
             }
-            $normalized .= '@';
+            $normalized .= RessLogsConstants::URL_USERINFO_SEPARATOR;
         }
 
         $normalized .= $parts['host'];
 
         if (isset($parts['port'])) {
-            $normalized .= ':' . $parts['port'];
+            $normalized .= RessLogsConstants::URL_PASSWORD_SEPARATOR . $parts['port'];
         }
 
         return $normalized;
@@ -299,7 +304,7 @@ class LogRecorder implements LogRecorderInterface
         $processed = [];
 
         foreach ($tags as $tagValue) {
-            $key = is_int($tagValue) ? sprintf('id:%d', $tagValue) : sprintf('name:%s', mb_strtolower(trim((string) $tagValue)));
+            $key = is_int($tagValue) ? sprintf(RessLogsConstants::TAG_KEY_ID_FORMAT, $tagValue) : sprintf(RessLogsConstants::TAG_KEY_NAME_FORMAT, mb_strtolower(trim((string) $tagValue)));
             if (isset($processed[$key])) {
                 continue;
             }
@@ -319,19 +324,19 @@ class LogRecorder implements LogRecorderInterface
     {
         $tag = is_int($tagValue)
             ? $this->logTagRepository->find($tagValue)
-            : $this->logTagRepository->findOneBy(['name' => trim((string) $tagValue)]);
+            : $this->logTagRepository->findOneBy([RessLogsConstants::FIELD_NAME => trim((string) $tagValue)]);
 
         if ($tag instanceof LogTag) {
             return $tag;
         }
 
         if (is_int($tagValue)) {
-            throw new InvalidArgumentException(sprintf('Tag introuvable pour l\'id %d.', $tagValue));
+            throw new InvalidArgumentException(sprintf(RessLogsConstants::ERROR_TAG_ID_NOT_FOUND, $tagValue));
         }
 
         $tagName = trim((string) $tagValue);
         if ($tagName === '') {
-            throw new InvalidArgumentException('Un tag vide ne peut pas être enregistré.');
+            throw new InvalidArgumentException(RessLogsConstants::ERROR_EMPTY_TAG);
         }
 
         $newTag = new LogTag();
@@ -352,7 +357,7 @@ class LogRecorder implements LogRecorderInterface
         }
 
         $stringValue = trim($value);
-        if ($stringValue === '') {
+        if ($stringValue === RessLogsConstants::EMPTY_STRING) {
             return null;
         }
 
@@ -367,7 +372,7 @@ class LogRecorder implements LogRecorderInterface
 
         $stringValue = trim((string) $value);
 
-        return $stringValue === '' ? null : $stringValue;
+        return $stringValue === RessLogsConstants::EMPTY_STRING ? null : $stringValue;
     }
 
     private function isStandardUrl(string $url): bool
@@ -381,6 +386,6 @@ class LogRecorder implements LogRecorderInterface
             return false;
         }
 
-        return in_array(strtolower((string) $parts['scheme']), ['http', 'https'], true);
+        return in_array(strtolower((string) $parts['scheme']), RessLogsConstants::ALLOWED_URL_SCHEMES, true);
     }
 }

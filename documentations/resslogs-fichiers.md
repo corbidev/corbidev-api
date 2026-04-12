@@ -34,7 +34,8 @@ Responsabilites :
 - expose la route `POST /api/logs` ;
 - decode le corps JSON ;
 - rejette les payloads invalides ou non objets ;
-- recupere la cle API depuis `x-api-key` ou `Authorization: Bearer ...` ;
+- exige `Authorization: Bearer ...` et resolve la source depuis le JWT ;
+- rejette `sourceApiKey` et `sourceId` s'ils sont presents dans le body JSON, car la source est deja resolue via le Bearer JWT ;
 - delegue la transformation du payload au mapper ;
 - delegue l'enregistrement metier au service `LogRecorderInterface` ;
 - retourne une reponse JSON `201` en cas de succes ou `400` en cas d'erreur fonctionnelle.
@@ -55,12 +56,12 @@ Responsabilites :
 
 Champs notables :
 
-- `message`, `title`, `url` ;
+- `message`, `title`, `url`, `uri` ;
 - `httpStatus`, `durationMs`, `fingerprint`, `context` ;
 - `ts`, `createdAt` ;
 - `level`, `env` ;
 - `sourceId`, `sourceApiKey` ;
-- `urlId`, `uriId`, `routeId`, `routeUrl`, `routeUri`, `uri` ;
+- `urlId`, `uriId`, `routeId`, `url`, `uri` ;
 - `tags`.
 
 Le DTO transporte la donnee ; il ne contient pas de logique metier.
@@ -84,7 +85,7 @@ Responsabilites :
 
 - normaliser certaines valeurs simples ;
 - convertir les champs numeriques optionnels ;
-- injecter `sourceApiKey` depuis le header si le body ne le fournit pas ;
+- injecter l'identite source resolue depuis le JWT valide ;
 - produire un DTO coherent pour la couche service.
 
 Ce fichier fait de la preparation de donnees, pas de persistence et pas de validation metier approfondie.
@@ -110,24 +111,28 @@ Responsabilites :
 - verifier que `url` est une URL standard `http` ou `https` ;
 - resoudre les references metier `level`, `env` et `source` ;
 - resoudre le couple `url` / `uri` via les IDs ou les valeurs textuelles ;
+- normaliser une `url` contenant deja un path en deplacant ce path vers `uri` ;
+- rejeter la requete si `url` contient un path incompatible avec `uri` ;
 - creer au besoin les entites `LogUrl`, `LogUri` et `LogTag` ;
 - construire une entite `LogEntry` ;
 - persister le log et les relations associees ;
 - demander aux repositories `LogUriRepository` et `LogUrlRepository` de supprimer les orphelins.
 
-Ce fichier fait le lien entre le DTO applicatif et le modele Doctrine.
+Ce fichier fait le lien entre le DTO applicatif et le modele Doctrine. La source resolue est desormais `App\RessAuth\Entity\AuthCredential`.
+
+Note schema : toutes les tables SQL du projet sont prefixees par la variable `SQL_PREFIXE` definie dans `.env`.
 
 ## Entities
 
 ### `api/src/RessLogs/Entity/LogEntry.php`
 
-Role : entite principale du module, correspondant a la table `log_entry`.
+Role : entite principale du module, correspondant a la table `${SQL_PREFIXE}log_entry`.
 
 Responsabilites :
 
 - stocker un evenement de log ;
 - porter les donnees metier centrales : message, titre, horodatage, statut HTTP, duree, fingerprint, contexte ;
-- porter les relations vers le niveau, l'environnement, la source, l'URL et l'URI ;
+- porter les relations vers le niveau, l'environnement, la source canonique (`AuthCredential`), l'URL et l'URI ;
 - porter la collection des tags via `LogEntryTag`.
 
 Particularites :
@@ -142,7 +147,7 @@ Role : table de jointure entre un log et un tag.
 Responsabilites :
 
 - relier `LogEntry` et `LogTag` en relation plusieurs-a-plusieurs explicite ;
-- servir de pivot Doctrine vers la table `log_entry_tag`.
+- servir de pivot Doctrine vers la table `${SQL_PREFIXE}log_entry_tag`.
 
 Particularite : la cle primaire est composite, composee de `log_entry_id` et `tag_id`.
 
@@ -164,17 +169,30 @@ Responsabilites :
 - stocker des valeurs comme `debug`, `info`, `warning`, `error`, `critical` ;
 - etre relie a plusieurs `LogEntry`.
 
-### `api/src/RessLogs/Entity/LogSource.php`
+### `api/src/RessAuth/Entity/AuthCredential.php`
 
-Role : representer l'application ou le composant emetteur du log.
+Role : representer la source canonique de l'application, y compris son identite metier et son secret d'authentification.
 
 Responsabilites :
 
 - stocker le nom, le type et la cle API de la source ;
+- stocker le hash du secret client ;
 - indiquer si la source est active ;
-- relier la source a tous les logs emis par elle.
+- relier cette source a tous les logs emis par elle via `LogEntry.source_id`.
 
 Champ important : `apiKey` est utilisee par le service pour identifier la source si `sourceId` n'est pas fourni.
+
+### `api/src/RessAuth/Command/SetLogSourceSecretCommand.php`
+
+Role : commande Symfony d'administration pour creer ou mettre a jour une source canonique et son secret.
+
+Responsabilites :
+
+- rechercher une source par `apiKey` dans `${SQL_PREFIXE}auth_credential` ;
+- creer la source si elle n'existe pas encore ;
+- generer ou accepter un secret ;
+- stocker le hash Argon2id du secret ;
+- conserver la compatibilite de nom de commande via `app:logs:set-source-secret`.
 
 ### `api/src/RessLogs/Entity/LogTag.php`
 
@@ -243,14 +261,14 @@ Responsabilites actuelles :
 
 - permettre la recherche des niveaux de log par identifiant ou par nom.
 
-### `api/src/RessLogs/Repository/LogSourceRepository.php`
+### `api/src/RessAuth/Repository/AuthCredentialRepository.php`
 
-Role : repository Doctrine de l'entite `LogSource`.
+Role : repository Doctrine de l'entite `AuthCredential`.
 
 Responsabilites actuelles :
 
-- permettre la recherche d'une source par identifiant ;
-- permettre la recherche d'une source active par `apiKey`.
+- permettre la recherche d'une source canonique active par `apiKey` ;
+- centraliser l'acces Doctrine a la table `${SQL_PREFIXE}auth_credential`.
 
 ### `api/src/RessLogs/Repository/LogTagRepository.php`
 

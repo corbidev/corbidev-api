@@ -27,8 +27,6 @@ final readonly class CreateLogRequestDto
         public ?int $urlId,
         public ?int $uriId,
         public ?int $routeId,
-        public ?string $routeUrl,
-        public ?string $routeUri,
         public ?string $uri,
         public ?array $tags,
     ) {

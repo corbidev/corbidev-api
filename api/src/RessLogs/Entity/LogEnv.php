@@ -10,13 +10,14 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: LogEnvRepository::class)]
 #[ORM\Table(name: 'log_env')]
+#[ORM\UniqueConstraint(name: 'name', columns: ['name'])]
 class LogEnv
 {
     #[ORM\Id]
     #[ORM\Column(type: 'smallint')]
     private ?int $id = null;
 
-    #[ORM\Column(length: 20, unique: true)]
+    #[ORM\Column(length: 20)]
     private ?string $name = null;
 
     /**

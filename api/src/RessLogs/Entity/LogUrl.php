@@ -10,6 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: LogUrlRepository::class)]
 #[ORM\Table(name: 'log_url')]
+#[ORM\UniqueConstraint(name: 'url', columns: ['url'])]
 class LogUrl
 {
     #[ORM\Id]
@@ -17,7 +18,7 @@ class LogUrl
     #[ORM\Column(type: 'bigint')]
     private ?int $id = null;
 
-    #[ORM\Column(length: 768, unique: true)]
+    #[ORM\Column(length: 768)]
     private ?string $url = null;
 
     /**
