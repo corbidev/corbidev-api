@@ -12,6 +12,22 @@ services:
         depends_on:
             - database
 
+    phpmyadmin:
+        image: phpmyadmin
+        restart: always
+        ports:
+        - ${PHPMYADMIN_LOCALHOST_PORT}:${PHPMYADMIN_DOCKER_PORT}
+        env_file:
+            - .env
+        environment:
+        - PMA_ARBITRARY=1
+        depends_on:
+            - database
+
+
+
+
+
 ###> doctrine/doctrine-bundle ###
     database:
         platform: linux/x86_64
