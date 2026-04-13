@@ -11,3 +11,4 @@
 deploy
 database/*
 !database/sql/
+api/.env
