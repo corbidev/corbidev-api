@@ -1,8 +1,10 @@
 <?php
 namespace App\Logs\Entity;
+
+use App\Logs\Repository\LogEventRepository;
 use Doctrine\ORM\Mapping as ORM;
 
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: LogEventRepository::class)]
 #[ORM\Table(name: 'CBV_LOGS_EVENT')]
 /**
  * Evenement principal enregistre par le systeme de logs.
@@ -52,6 +54,18 @@ class LogEvent {
      */
     #[ORM\Column(length: 1024)]
     private string $message;
+
+    /**
+     * Identifiant utilisateur associe a l'evenement quand il existe.
+     */
+    #[ORM\Column(type: 'integer', nullable: true)]
+    private ?int $userId = null;
+
+    /**
+     * Code HTTP associe a l'evenement quand il provient d'un contexte web.
+     */
+    #[ORM\Column(type: 'integer', nullable: true)]
+    private ?int $httpStatus = null;
 
     /**
      * Empreinte de deduplication pour les regroupements statistiques.
@@ -183,6 +197,30 @@ class LogEvent {
     public function setMessage(string $message): self
     {
         $this->message = trim($message);
+
+        return $this;
+    }
+
+    public function getUserId(): ?int
+    {
+        return $this->userId;
+    }
+
+    public function setUserId(?int $userId): self
+    {
+        $this->userId = $userId;
+
+        return $this;
+    }
+
+    public function getHttpStatus(): ?int
+    {
+        return $this->httpStatus;
+    }
+
+    public function setHttpStatus(?int $httpStatus): self
+    {
+        $this->httpStatus = $httpStatus;
 
         return $this;
     }

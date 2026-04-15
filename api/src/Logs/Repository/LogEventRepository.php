@@ -4,6 +4,7 @@ namespace App\Logs\Repository;
 
 use App\Logs\Entity\LogEvent;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\Persistence\ManagerRegistry;
 use Doctrine\ORM\QueryBuilder;
 use InvalidArgumentException;
@@ -245,20 +246,37 @@ class LogEventRepository extends ServiceEntityRepository
      */
     public function countByDay(array $scope, int $days = 30): array
     {
-        $qb = $this->createQueryBuilder('l')
-            ->select("DATE(l.ts) AS day, COUNT(l.id) AS total")
-            ->leftJoin('l.origin', 'o')
-            ->leftJoin('o.domain', 'd');
+        if (empty($scope['domain'])) {
+            throw new InvalidArgumentException('Domain is required for scoped queries');
+        }
 
-        $this->applyScope($qb, $scope);
+        $qb = $this->getEntityManager()->getConnection()->createQueryBuilder();
 
-        return $qb
+        $qb
+            ->select('DATE(l.ts) AS day', 'COUNT(l.id) AS total')
+            ->from('CBV_LOGS_EVENT', 'l')
+            ->innerJoin('l', 'CBV_LOGS_ORIGIN', 'o', 'l.origin_id = o.id')
+            ->innerJoin('o', 'CBV_LOGS_DOMAIN', 'd', 'o.domain_id = d.id')
+            ->where('d.url = :scope_domain')
             ->andWhere('l.ts >= :date')
-            ->setParameter('date', new \DateTimeImmutable("-$days days"))
-            ->groupBy('day')
-            ->orderBy('day', 'DESC')
-            ->getQuery()
-            ->getArrayResult();
+            ->setParameter('scope_domain', $scope['domain'])
+            ->setParameter('date', new \DateTimeImmutable("-$days days"), Types::DATETIME_IMMUTABLE)
+            ->groupBy('DATE(l.ts)')
+            ->orderBy('day', 'DESC');
+
+        if (!empty($scope['client'])) {
+            $qb
+                ->andWhere('o.client = :scope_client')
+                ->setParameter('scope_client', $scope['client']);
+        }
+
+        if (!empty($scope['version'])) {
+            $qb
+                ->andWhere('o.version = :scope_version')
+                ->setParameter('scope_version', $scope['version']);
+        }
+
+        return $qb->executeQuery()->fetchAllAssociative();
     }
 
     /**

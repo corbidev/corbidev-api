@@ -64,6 +64,9 @@
         "symfony/polyfill-php84": "*"
     },
     "scripts": {
+        "test:logs:integration": "php bin/phpunit tests/Logs/Repository/LogEventRepositoryDoctrineTest.php",
+        "test:logs:unit": "php bin/phpunit tests/Logs/Repository/LogDomainRepositoryTest.php tests/Logs/Repository/LogEventRepositoryTest.php",
+        "test:logs": "php bin/phpunit tests/Logs/Repository/LogDomainRepositoryTest.php tests/Logs/Repository/LogEventRepositoryTest.php tests/Logs/Repository/LogEventRepositoryDoctrineTest.php",
         "auto-scripts": {
             "cache:clear": "symfony-cmd",
             "assets:install %PUBLIC_DIR%": "symfony-cmd"

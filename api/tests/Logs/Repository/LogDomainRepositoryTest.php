@@ -36,10 +36,10 @@ class LogDomainRepositoryTest extends TestCase
             'andWhere' => [],
         ];
 
-        $query = $this->createMock(Query::class);
+        $query = $this->createStub(Query::class);
         $query->method('getResult')->willReturn($result);
 
-        $qb = $this->createMock(QueryBuilder::class);
+        $qb = $this->createStub(QueryBuilder::class);
         $qb->method('andWhere')->willReturnCallback(function (...$args) use ($qb, $state) {
             $state->andWhere[] = $args[0];
 
@@ -57,7 +57,7 @@ class LogDomainRepositoryTest extends TestCase
             ->onlyMethods(['createQueryBuilder'])
             ->getMock();
 
-        $repository->method('createQueryBuilder')->willReturnCallback(function (string $alias) use ($qb) {
+        $repository->expects(self::once())->method('createQueryBuilder')->willReturnCallback(function (string $alias) use ($qb) {
             self::assertSame('d', $alias);
 
             return $qb;

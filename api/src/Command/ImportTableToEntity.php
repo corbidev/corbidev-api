@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Command\ImportTableToEntity;
+namespace App\Command;
 
 use Doctrine\DBAL\Types\Types;
-use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Query\ResultSetMapping;
 use Doctrine\Persistence\ManagerRegistry;
 use Exception;
@@ -22,22 +22,27 @@ use Symfony\Component\HttpKernel\KernelInterface;
 /**
  * Genere une entite Doctrine a partir de la structure d'une table PostgreSQL.
  */
-class ImportTableToEntityCommand extends Command
+class ImportTableToEntity extends Command
 {
 
 
 
     private string $projectDir;
-    private EntityManager $entityManager;
+    private EntityManagerInterface $entityManager;
 
     /**
      * @param ManagerRegistry $doctrine Registre Doctrine utilise pour acceder au manager map.
      */
     public function __construct( KernelInterface $kernel,ManagerRegistry $doctrine)
     {
+        $entityManager = $doctrine->getManager('map');
+
+        if (!$entityManager instanceof EntityManagerInterface) {
+            throw new \LogicException('Doctrine manager "map" must be an EntityManagerInterface.');
+        }
 
         $this->projectDir                  = $kernel->getProjectDir();
-        $this->entityManager               = $doctrine->getManager('map');
+        $this->entityManager               = $entityManager;
 
         parent::__construct();
     }

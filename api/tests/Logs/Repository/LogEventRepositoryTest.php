@@ -25,7 +25,7 @@ class LogEventRepositoryTest extends TestCase
 
     public function testSearchBuildsScopedPaginatedQuery(): void
     {
-        $expectedResult = [$this->createMock(\App\Logs\Entity\LogEvent::class)];
+        $expectedResult = [$this->createStub(\App\Logs\Entity\LogEvent::class)];
         [$qb, $state] = $this->createQueryBuilderSpy($expectedResult);
         $repository = $this->createRepository($qb);
 
@@ -85,7 +85,7 @@ class LogEventRepositoryTest extends TestCase
 
     public function testSearchWithContextBuildsGroupedOrExpression(): void
     {
-        $expectedResult = [$this->createMock(\App\Logs\Entity\LogEvent::class)];
+        $expectedResult = [$this->createStub(\App\Logs\Entity\LogEvent::class)];
         [$qb, $state] = $this->createQueryBuilderSpy($expectedResult);
         $repository = $this->createRepository($qb);
 
@@ -121,7 +121,7 @@ class LogEventRepositoryTest extends TestCase
             'select' => [],
         ];
 
-        $query = $this->createMock(Query::class);
+        $query = $this->createStub(Query::class);
         $query->method('getResult')->willReturn($result);
         $query->method('getArrayResult')->willReturn($result);
 
@@ -129,7 +129,7 @@ class LogEventRepositoryTest extends TestCase
             $query->method('getSingleScalarResult')->willReturn($singleScalarResult);
         }
 
-        $qb = $this->createMock(QueryBuilder::class);
+        $qb = $this->createStub(QueryBuilder::class);
         $qb->method('leftJoin')->willReturn($qb);
         $qb->method('addSelect')->willReturn($qb);
         $qb->method('select')->willReturnCallback(function (...$args) use ($qb, $state) {
@@ -176,7 +176,7 @@ class LogEventRepositoryTest extends TestCase
             ->onlyMethods(['createQueryBuilder'])
             ->getMock();
 
-        $repository->method('createQueryBuilder')->willReturnCallback(function (string $alias) use ($qb) {
+        $repository->expects(self::once())->method('createQueryBuilder')->willReturnCallback(function (string $alias) use ($qb) {
             self::assertSame('l', $alias);
 
             return $qb;
