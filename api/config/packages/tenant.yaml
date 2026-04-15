@@ -1,0 +1,4 @@
+parameters:
+    tenant.allowed_domains:
+        - 'https://corbisier.fr'
+        - 'https://api.corbisier.fr'

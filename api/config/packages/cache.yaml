@@ -15,5 +15,11 @@ framework:
         #app: cache.adapter.apcu
 
         # Namespaced pools use the above "app" backend by default
-        #pools:
+        pools:
+            tenant.cache:
+                adapter: cache.app
             #my.dedicated.cache: null
+services:
+    App\Logs\Context\TenantProvider:
+        arguments:
+            $cache: '@tenant.cache'

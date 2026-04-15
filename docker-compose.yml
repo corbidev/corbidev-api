@@ -13,7 +13,7 @@ services:
             - database
 
     phpmyadmin:
-        image: phpmyadmin
+        image: phpmyadmin_${NAME}
         restart: always
         ports:
         - ${PHPMYADMIN_LOCALHOST_PORT}:${PHPMYADMIN_DOCKER_PORT}
