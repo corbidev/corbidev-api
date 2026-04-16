@@ -23,4 +23,4 @@ api/config/jwt/*.pem
 deploy
 database/*
 !database/sql/
-/api_*
+api_*/
