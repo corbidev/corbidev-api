@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Logs\Context;
+namespace App\Api\Logs\Context;
 
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
-use App\Logs\Context\TenantContext;
+use App\Api\Logs\Context\TenantContext;
 
 /**
  * Resout le tenant courant a partir des en-tetes HTTP et verifie son autorisation.

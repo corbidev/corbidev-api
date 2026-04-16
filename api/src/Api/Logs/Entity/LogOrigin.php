@@ -1,5 +1,5 @@
 <?php
-namespace App\Logs\Entity;
+namespace App\Api\Logs\Entity;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;

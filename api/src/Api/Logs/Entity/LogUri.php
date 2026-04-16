@@ -1,31 +1,28 @@
 <?php
-namespace App\Logs\Entity;
+namespace App\Api\Logs\Entity;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
-#[ORM\Table(name: 'CBV_LOGS_DOMAIN')]
+#[ORM\Table(name: 'CBV_LOGS_URI')]
 /**
- * Domaine fonctionnel rattache a une origine de log.
+ * URI normalisée ciblée par un evenement de log.
  */
-class LogDomain {
+class LogUri {
     /**
-     * Identifiant technique du domaine.
+     * Identifiant technique de l'URI.
      */
     #[ORM\Id, ORM\GeneratedValue, ORM\Column(type: 'bigint')]
     private ?int $id = null;
 
     /**
-     * URL canonique utilisee pour le scoping tenant.
+     * Chemin unique de la ressource appelee.
      */
     #[ORM\Column(length: 255, unique: true)]
-    private string $url;
+    private string $uri;
 
-    #[ORM\Column(type: 'boolean', options: ['default' => true])]
-    private bool $isActive = true;
-
-    #[ORM\OneToMany(mappedBy: 'domain', targetEntity: LogOrigin::class)]
+    #[ORM\OneToMany(mappedBy: 'uri', targetEntity: LogOrigin::class)]
     private Collection $origins;
 
     public function __construct()
@@ -38,26 +35,14 @@ class LogDomain {
         return $this->id;
     }
 
-    public function getUrl(): string
+    public function getUri(): string
     {
-        return $this->url;
+        return $this->uri;
     }
 
-    public function setUrl(string $url): self
+    public function setUri(string $uri): self
     {
-        $this->url = strtolower(rtrim(trim($url), '/'));
-
-        return $this;
-    }
-
-    public function isActive(): bool
-    {
-        return $this->isActive;
-    }
-
-    public function setIsActive(bool $isActive): self
-    {
-        $this->isActive = $isActive;
+        $this->uri = trim($uri);
 
         return $this;
     }
@@ -88,6 +73,6 @@ class LogDomain {
 
     public function __toString(): string
     {
-        return isset($this->url) ? $this->url : '';
+        return isset($this->uri) ? $this->uri : '';
     }
 }

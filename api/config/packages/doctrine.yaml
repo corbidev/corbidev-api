@@ -1,41 +1,34 @@
+# config/packages/doctrine.yaml
+
 doctrine:
-    dbal:
-        url: '%env(resolve:DATABASE_URL)%'
-        #server_version: '10.6' # à adapter selon MariaDB
+  dbal:
+    default_connection: api
 
-        profiling_collect_backtrace: '%kernel.debug%'
+    connections:
+      auth:
+        url: '%env(resolve:DATABASE_AUTH_URL)%'
 
-    orm:
-        validate_xml_mapping: true
-        naming_strategy: doctrine.orm.naming_strategy.underscore
+      api:
+        url: '%env(resolve:DATABASE_API_URL)%'
 
-        identity_generation_preferences:
-            Doctrine\DBAL\Platforms\PostgreSQLPlatform: identity
+  orm:
+    default_entity_manager: api
 
-        auto_mapping: false
+    entity_managers:
 
+      auth:
+        connection: auth
+        mappings:
+          Auth:
+            is_bundle: false
+            dir: '%kernel.project_dir%/src/Auth/Entity'
+            prefix: 'App\Auth\Entity'
+
+      api:
+        connection: api
         mappings:
 
-            # 🔹 Module Logs
-            Logs:
-                is_bundle: false
-                type: attribute
-                dir: '%kernel.project_dir%/src/Logs/Entity'
-                prefix: 'App\Logs\Entity'
-                alias: Logs
-
-            # 🔹 Module principal (si encore utilisé)
-            App:
-                is_bundle: false
-                type: attribute
-                dir: '%kernel.project_dir%/src/Entity'
-                prefix: 'App\Entity'
-                alias: App
-
-            # 🔹 Exemple futur module (à activer plus tard)
-            # User:
-            #     is_bundle: false
-            #     type: attribute
-            #     dir: '%kernel.project_dir%/src/User/Entity'
-            #     prefix: 'App\User\Entity'
-            #     alias: User
+          Logs:
+            is_bundle: false
+            dir: '%kernel.project_dir%/src/Api/Logs/Entity'
+            prefix: 'App\Api\Logs\Entity'

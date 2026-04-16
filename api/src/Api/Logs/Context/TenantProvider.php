@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Logs\Context;
+namespace App\Api\Logs\Context;
 
-use App\Logs\Repository\LogDomainRepository;
+use App\Api\Logs\Repository\LogDomainRepository;
 use Psr\Cache\CacheItemPoolInterface;
 
 /**

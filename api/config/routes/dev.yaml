@@ -1,0 +1,9 @@
+# routes/dev.yaml
+auth:
+  resource: ../../src/Auth/Controller/
+  host: '%env(AUTH_HOST)%'
+
+api_logs:
+  resource: ../../src/Api/Logs/Controller/
+  prefix: /api/logs
+  host: '%env(API_HOST)%'

@@ -41,6 +41,21 @@ services:
             - ./${FOLDER_DATABASE}:/var/lib/mysql:rw
         ports:
             - ${SQL_LOCALHOST_PORT}:${SQL_DOCKER_PORT}
+
+    database_api:
+        platform: linux/x86_64
+        container_name: mariadb_${NAME}_${MARIADB_VERSION}_api
+        image: mariadb:${MARIADB_VERSION}
+        restart: no
+        env_file:
+            - .env
+        volumes:
+            - ./${FOLDER_DATASQL_API}:/docker-entrypoint-initdb.d/
+            - ./${FOLDER_DATABASE_API}:/var/lib/mysql:rw
+        ports:
+            - ${SQL_LOCALHOST_PORT_API}:${SQL_DOCKER_PORT_API}
+
+
 ###< doctrine/doctrine-bundle ###
 # ##< BASE DE DONNÉES // ADMINER ET mariadb
 

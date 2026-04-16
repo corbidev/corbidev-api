@@ -1,11 +1,24 @@
 # yaml-language-server: $schema=../vendor/symfony/routing/Loader/schema/routing.schema.json
 
-# This file is the entry point to configure the routes of your app.
-# Methods with the #[Route] attribute are automatically imported.
-# See also https://symfony.com/doc/current/routing.html
+# =========================
+# 🔓 AUTH
+# =========================
+auth_controllers:
+    resource: ../src/Auth/Controller/
+    type: attribute
 
-# To list all registered routes, run the following command:
-#   bin/console debug:router
+# =========================
+# 🔐 API LOGS
+# =========================
+api_logs_controllers:
+    resource: ../src/Api/Logs/Controller/
+    type: attribute
+    prefix: /api/logs
 
-controllers:
-    resource: routing.controllers
+# =========================
+# 🐱 API CORBYCATS
+# =========================
+#api_corbycats_controllers:
+#    resource: ../src/Api/Corbycats/Controller/
+#    type: attribute
+#    prefix: /api/corbycats

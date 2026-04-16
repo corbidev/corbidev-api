@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Logs\Context;
+namespace App\Api\Logs\Context;
 
 /**
  * Represente le contexte tenant resolu depuis la requete courante.

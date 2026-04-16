@@ -1,34 +1,28 @@
 <?php
-namespace App\Logs\Entity;
+namespace App\Api\Logs\Entity;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
-#[ORM\Table(name: 'CBV_LOGS_LEVEL')]
+#[ORM\Table(name: 'CBV_LOGS_ENV')]
 /**
- * Niveau de severite d'un evenement de log.
+ * Environnement d'execution associe a un evenement de log.
  */
-class LogLevel {
+class LogEnv {
     /**
-     * Identifiant technique du niveau.
+     * Identifiant technique de l'environnement.
      */
     #[ORM\Id, ORM\GeneratedValue, ORM\Column(type: 'smallint')]
     private ?int $id = null;
 
     /**
-     * Libelle court unique, par exemple INFO ou ERROR.
+     * Code fonctionnel de l'environnement, par exemple prod ou dev.
      */
     #[ORM\Column(length: 10, unique: true)]
     private string $name;
 
-    /**
-     * Valeur numerique du niveau pour le tri et la comparaison.
-     */
-    #[ORM\Column(type: 'smallint', unique: true)]
-    private int $levelInt;
-
-    #[ORM\OneToMany(mappedBy: 'level', targetEntity: LogEvent::class)]
+    #[ORM\OneToMany(mappedBy: 'env', targetEntity: LogEvent::class)]
     private Collection $events;
 
     public function __construct()
@@ -48,26 +42,9 @@ class LogLevel {
 
     public function setName(string $name): self
     {
-        $this->name = strtoupper(trim($name));
+        $this->name = trim($name);
 
         return $this;
-    }
-
-    public function getLevelInt(): int
-    {
-        return $this->levelInt;
-    }
-
-    public function setLevelInt(int $levelInt): self
-    {
-        $this->levelInt = $levelInt;
-
-        return $this;
-    }
-
-    public function isHigherOrEqualThan(int $levelInt): bool
-    {
-        return $this->levelInt >= $levelInt;
     }
 
     /**
