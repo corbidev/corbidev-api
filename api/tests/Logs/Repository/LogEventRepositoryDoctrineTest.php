@@ -2,13 +2,13 @@
 
 namespace App\Tests\Logs\Repository;
 
-use App\Logs\Entity\LogDomain;
-use App\Logs\Entity\LogEnv;
-use App\Logs\Entity\LogEvent;
-use App\Logs\Entity\LogLevel;
-use App\Logs\Entity\LogOrigin;
-use App\Logs\Entity\LogUri;
-use App\Logs\Repository\LogEventRepository;
+use App\Api\Logs\Entity\LogDomain;
+use App\Api\Logs\Entity\LogEnv;
+use App\Api\Logs\Entity\LogEvent;
+use App\Api\Logs\Entity\LogLevel;
+use App\Api\Logs\Entity\LogOrigin;
+use App\Api\Logs\Entity\LogUri;
+use App\Api\Logs\Repository\LogEventRepository;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\Persistence\ManagerRegistry;

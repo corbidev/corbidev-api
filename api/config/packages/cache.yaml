@@ -20,6 +20,6 @@ framework:
                 adapter: cache.app
             #my.dedicated.cache: null
 services:
-    App\Logs\Context\TenantProvider:
+    App\Api\Logs\Context\TenantProvider:
         arguments:
             $cache: '@tenant.cache'

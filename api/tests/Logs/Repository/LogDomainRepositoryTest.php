@@ -2,8 +2,8 @@
 
 namespace App\Tests\Logs\Repository;
 
-use App\Logs\Entity\LogDomain;
-use App\Logs\Repository\LogDomainRepository;
+use App\Api\Logs\Entity\LogDomain;
+use App\Api\Logs\Repository\LogDomainRepository;
 use Doctrine\ORM\Query;
 use Doctrine\ORM\QueryBuilder;
 use PHPUnit\Framework\TestCase;

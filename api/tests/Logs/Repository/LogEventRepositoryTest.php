@@ -2,7 +2,7 @@
 
 namespace App\Tests\Logs\Repository;
 
-use App\Logs\Repository\LogEventRepository;
+use App\Api\Logs\Repository\LogEventRepository;
 use Doctrine\ORM\Query;
 use Doctrine\ORM\Query\Expr;
 use Doctrine\ORM\Query\Expr\Orx;
@@ -25,7 +25,7 @@ class LogEventRepositoryTest extends TestCase
 
     public function testSearchBuildsScopedPaginatedQuery(): void
     {
-        $expectedResult = [$this->createStub(\App\Logs\Entity\LogEvent::class)];
+        $expectedResult = [$this->createStub(\App\Api\Logs\Entity\LogEvent::class)];
         [$qb, $state] = $this->createQueryBuilderSpy($expectedResult);
         $repository = $this->createRepository($qb);
 
@@ -85,7 +85,7 @@ class LogEventRepositoryTest extends TestCase
 
     public function testSearchWithContextBuildsGroupedOrExpression(): void
     {
-        $expectedResult = [$this->createStub(\App\Logs\Entity\LogEvent::class)];
+        $expectedResult = [$this->createStub(\App\Api\Logs\Entity\LogEvent::class)];
         [$qb, $state] = $this->createQueryBuilderSpy($expectedResult);
         $repository = $this->createRepository($qb);
 

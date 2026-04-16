@@ -1,7 +1,7 @@
 <?php
 namespace App\Api\Logs\Entity;
 
-use App\Logs\Repository\LogEventRepository;
+use App\Api\Logs\Repository\LogEventRepository;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: LogEventRepository::class)]

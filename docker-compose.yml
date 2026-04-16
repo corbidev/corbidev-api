@@ -13,7 +13,9 @@ services:
             - database
 
     phpmyadmin:
-        image: phpmyadmin_${NAME}
+        platform: linux/x86_64
+        container_name: phpmyadmin_${NAME}_${PHPMYADMIN_VERSION}
+        image: phpmyadmin:${PHPMYADMIN_VERSION}
         restart: always
         ports:
         - ${PHPMYADMIN_LOCALHOST_PORT}:${PHPMYADMIN_DOCKER_PORT}
