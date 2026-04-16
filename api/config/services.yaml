@@ -1,6 +1,8 @@
 # config/services.yaml
 
 parameters:
+    auth_host: '%env(AUTH_HOST)%'
+    api_host: '%env(API_HOST)%'
 
 services:
 
