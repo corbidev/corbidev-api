@@ -24,3 +24,4 @@ deploy
 database/*
 !database/sql/
 api_*/
+temp/
