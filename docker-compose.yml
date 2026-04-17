@@ -12,6 +12,24 @@ services:
         depends_on:
             - database
 
+    phpmyadmin:
+        platform: linux/x86_64
+        container_name: phpmyadmin_${NAME}_${PHPMYADMIN_VERSION}
+        image: phpmyadmin:${PHPMYADMIN_VERSION}
+        restart: always
+        ports:
+        - ${PHPMYADMIN_LOCALHOST_PORT}:${PHPMYADMIN_DOCKER_PORT}
+        env_file:
+            - .env
+        environment:
+        - PMA_ARBITRARY=1
+        depends_on:
+            - database
+
+
+
+
+
 ###> doctrine/doctrine-bundle ###
     database:
         platform: linux/x86_64
@@ -25,6 +43,21 @@ services:
             - ./${FOLDER_DATABASE}:/var/lib/mysql:rw
         ports:
             - ${SQL_LOCALHOST_PORT}:${SQL_DOCKER_PORT}
+
+    database_api:
+        platform: linux/x86_64
+        container_name: mariadb_${NAME}_${MARIADB_VERSION}_api
+        image: mariadb:${MARIADB_VERSION}
+        restart: no
+        env_file:
+            - .env
+        volumes:
+            - ./${FOLDER_DATASQL_API}:/docker-entrypoint-initdb.d/
+            - ./${FOLDER_DATABASE_API}:/var/lib/mysql:rw
+        ports:
+            - ${SQL_LOCALHOST_PORT_API}:${SQL_DOCKER_PORT_API}
+
+
 ###< doctrine/doctrine-bundle ###
 # ##< BASE DE DONNÉES // ADMINER ET mariadb
 

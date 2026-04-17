@@ -2,6 +2,11 @@
 .github
 .rsync-ignore
 .vscode
-vendor
 database
+vendor
+api/vendor
 .env
+api/var
+api/tests
+api/config/jwt
+api/postman

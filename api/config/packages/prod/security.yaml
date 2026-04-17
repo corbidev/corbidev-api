@@ -1,0 +1,17 @@
+# config/packages/prod/security.yaml
+
+security:
+    firewalls:
+
+        auth:
+            host: '%env(AUTH_HOST)%'
+
+        api:
+            host: '%env(API_HOST)%'
+
+    access_control:
+        - { path: ^/login, roles: PUBLIC_ACCESS, host: '%env(AUTH_HOST)%' }
+        - { path: ^/, roles: IS_AUTHENTICATED_FULLY, host: '%env(AUTH_HOST)%' }
+
+        - { path: ^/api/logs, roles: ROLE_LOGS, host: '%env(API_HOST)%' }
+        - { path: ^/api/corbycats, roles: ROLE_CAT, host: '%env(API_HOST)%' }
