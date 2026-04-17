@@ -42,7 +42,8 @@ security:
         # =========================
         # 🔐 API (PRIORITAIRE)
         # =========================
-        - { path: ^/api/logs, roles: ROLE_LOGS }
+        #- { path: ^/api/logs, roles: ROLE_LOGS }
+        - { path: ^/api/logs, roles: PUBLIC_ACCESS }
         # - { path: ^/api/corbycats, roles: ROLE_CAT }
 
         # =========================
