@@ -1,37 +1,33 @@
-# Ce workflow déploie automatiquement sur le serveur DEV après merge dans develop
-
-name: 🚀 Déploiement DEV
+name: 🚀 Déploiement BRANCH → DEV
 
 on:
-  pull_request:
-    branches: [ develop ]
-    types: [ closed ]
+  workflow_dispatch:
 
 permissions:
   contents: write
   pull-requests: write
 
 concurrency:
-  group: dev-deploy-${{ github.ref_name }}
+  group: branch-deploy-${{ github.ref_name }}
   cancel-in-progress: true
 
 jobs:
-  deploy-dev:
-    name: 🚀 Déploiement DEV
-    if: |
-      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
-      (github.event_name == 'workflow_dispatch')
+  deploy-branch-dev:
+    name: 🚀 Déployer la branche ${{ github.ref_name }} vers DEV
     uses: LeZouzouEnWeb/workflows/.github/workflows/deploy.yml@V1.0.5
+
     permissions:
       contents: write
       pull-requests: write
+
     secrets:
       REMOTE_CHEMIN: ${{ secrets.REMOTE_CHEMIN }}
       SFTP_HOST: ${{ secrets.SFTP_HOST }}
       SFTP_USER: ${{ secrets.SFTP_USER }}
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+
     with:
       ADRESSE_GLOBAL: ${{ vars.ADRESSE_GLOBAL }}
       ADRESSE_LOCAL: ${{ vars.ADRESSE_LOCAL }}
-      remote_env: 'dev'
+      remote_env: dev
       enable_mirror: false
