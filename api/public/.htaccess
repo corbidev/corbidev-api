@@ -1,17 +1,10 @@
-# Apache rewrite rules for Symfony front controller
-
-<IfModule mod_negotiation.c>
-    Options -MultiViews
-</IfModule>
+# Version safe Ionos
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Let Apache serve existing files directly
-    RewriteCond %{REQUEST_FILENAME} -f
-    RewriteRule ^ - [L]
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
 
-    # Send all other requests to Symfony
-    RewriteRule ^ index.php [QSA,L]
-
+    RewriteRule ^ index.php [L]
 </IfModule>

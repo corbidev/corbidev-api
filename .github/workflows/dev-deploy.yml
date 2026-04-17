@@ -6,32 +6,33 @@ on:
   pull_request:
     branches: [ develop ]
     types: [ closed ]
+  workflow_dispatch:
 
 permissions:
   contents: write
   pull-requests: write
 
 concurrency:
-  group: dev-deploy-${{ github.event.pull_request.head.ref }}
+  group: dev-deploy-${{ github.ref_name }}
   cancel-in-progress: true
 
 jobs:
   deploy-dev:
     name: 🚀 Déploiement DEV
-    if: github.event.pull_request.merged == true
+    if: |
+      (github.event_name == 'pull_request' && github.event.pull_request.merged == true) ||
+      (github.event_name == 'workflow_dispatch')
     uses: LeZouzouEnWeb/workflows/.github/workflows/deploy.yml@V1.0.5
     permissions:
       contents: write
       pull-requests: write
     secrets:
-      # Secrets requis pour le déploiement SSH
-      REMOTE_CHEMIN: ${{ secrets.REMOTE_CHEMIN }}        # Chemin de base sur le serveur
-      SFTP_HOST: ${{ secrets.SFTP_HOST }}                # Adresse du serveur
-      SFTP_USER: ${{ secrets.SFTP_USER }}                # Utilisateur SSH
-      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}    # Clé privée SSH
+      REMOTE_CHEMIN: ${{ secrets.REMOTE_CHEMIN }}
+      SFTP_HOST: ${{ secrets.SFTP_HOST }}
+      SFTP_USER: ${{ secrets.SFTP_USER }}
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
     with:
-      # Variables pour construire le chemin distant
-      ADRESSE_GLOBAL: ${{ vars.ADRESSE_GLOBAL }}         # Ex: www
-      ADRESSE_LOCAL: ${{ vars.ADRESSE_LOCAL }}           # Ex: mon-site
+      ADRESSE_GLOBAL: ${{ vars.ADRESSE_GLOBAL }}
+      ADRESSE_LOCAL: ${{ vars.ADRESSE_LOCAL }}
       remote_env: 'dev'
       enable_mirror: false
