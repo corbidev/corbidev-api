@@ -6,7 +6,9 @@ database
 vendor
 api/vendor
 .env
+.env.*
 api/var
 api/tests
 api/config/jwt
 api/postman
+api/public/bundles/
