@@ -1,0 +1,25 @@
+parameters:
+    tenant.allowed_domains:
+        - 'https://corbisier.fr'
+        - 'https://api.corbisier.fr'
+        - 'https://lescorbycats.fr'
+    tenant.allowed_hosts:
+        - 'corbisier.fr'
+        - 'api.corbisier.fr'
+        - 'lescorbycats.fr'
+    tenant.allowed_origins:
+        - 'https://corbisier.fr'
+        - 'https://api.corbisier.fr'
+        - 'https://lescorbycats.fr'
+    tenant.allowed_methods:
+        - 'GET'
+        - 'POST'
+        - 'PUT'
+        - 'DELETE'
+        - 'OPTIONS'
+    tenant.allowed_headers:
+        - 'Content-Type'
+        - 'Authorization'
+    tenant.exposed_headers:
+        - 'Content-Type'
+    tenant.max_age: 3600

@@ -1,16 +1,19 @@
 
 ###> symfony/framework-bundle ###
-/.env
-/.env.*
-!.env.example
+/.env.local
+/.env.local.php
+/.env.*.local
 /config/secrets/prod/prod.decrypt.private.php
+/public/bundles/
 /var/
 /vendor/
-/public/bundles/
 ###< symfony/framework-bundle ###
+
+###> phpunit/phpunit ###
+/phpunit.xml
+/.phpunit.cache/
+###< phpunit/phpunit ###
 
 ###> lexik/jwt-authentication-bundle ###
 /config/jwt/*.pem
 ###< lexik/jwt-authentication-bundle ###
-
-
