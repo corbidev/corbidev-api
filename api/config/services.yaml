@@ -34,3 +34,12 @@ services:
     App\Api\Logs\Context\TenantProvider:
         arguments:
             $cache: '@tenant.cache'
+
+
+    # =========================
+    # 📊 Error - Mapping http status 
+    # =========================
+
+    App\Http\HttpStatusProvider:
+        arguments:
+            $filePath: '%kernel.project_dir%/config/http_statuses.fr.json'

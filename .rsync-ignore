@@ -5,6 +5,9 @@
 .vscode
 .env
 .env.*
+.env.docker-compose.example
+!.env.*.example 
+docker-compose.*
 
 database
 vendor
