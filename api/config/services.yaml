@@ -10,7 +10,9 @@ services:
         autowire: true
         autoconfigure: true
 
-    # 🔥 Chargement global
+    # =========================
+    # 🔥 Chargement automatique de l'app
+    # =========================
     App\:
         resource: '../src/'
         exclude:

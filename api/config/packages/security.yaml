@@ -17,41 +17,16 @@ security:
             pattern: ^/(_profiler|_wdt|assets|build)/
             security: false
 
-        # 🔐 API (stateless JWT)
+        # 🌐 API DOMAIN
         api:
-            pattern: ^/api
-            stateless: true
-            jwt: ~
+            pattern: ^/
+            host: '%env(API_HOST_REGEX)%'
+            security: false
 
-        # 🔓 AUTH (login + session)
+        # 🌐 AUTH DOMAIN
         auth:
             pattern: ^/
-            provider: auth_user_provider
-            lazy: true
-            stateless: false
+            host: '%env(AUTH_HOST_REGEX)%'
+            security: false
 
-            form_login:
-                login_path: /login
-                check_path: /login
-
-            logout:
-                path: /logout
-
-    access_control:
-
-        # =========================
-        # 🔐 API (PRIORITAIRE)
-        # =========================
-        #- { path: ^/api/logs, roles: ROLE_LOGS }
-        - { path: ^/api/logs, roles: PUBLIC_ACCESS }
-        # - { path: ^/api/corbycats, roles: ROLE_CAT }
-
-        # =========================
-        # 🔓 AUTH
-        # =========================
-        - { path: ^/login, roles: PUBLIC_ACCESS }
-
-        # =========================
-        # 🔒 AUTRES ROUTES AUTH
-        # =========================
-        - { path: ^/, roles: IS_AUTHENTICATED_FULLY }
+    access_control: [ ]
