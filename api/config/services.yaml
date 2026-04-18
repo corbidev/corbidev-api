@@ -35,11 +35,16 @@ services:
         arguments:
             $cache: '@tenant.cache'
 
+    # =========================
+    # 📊 Error - Envoi api json
+    # =========================
+    App\EventListener\ApiErrorListener:
+        tags:
+            - { name: kernel.event_listener, event: kernel.exception, priority: 100 }
 
     # =========================
     # 📊 Error - Mapping http status 
     # =========================
-
     App\Http\HttpStatusProvider:
         arguments:
             $filePath: '%kernel.project_dir%/config/http_statuses.fr.json'
