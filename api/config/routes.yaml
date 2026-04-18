@@ -1,5 +1,9 @@
 # yaml-language-server: $schema=../vendor/symfony/routing/Loader/schema/routing.schema.json
 
+controllers:
+    resource: ../src/Controller/
+    type: attribute
+
 api_platform:
     resource: routes/api_platform.yaml
 
