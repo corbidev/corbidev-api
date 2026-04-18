@@ -1,18 +1,20 @@
 <?php
 
-namespace App\Auth\Controller
+namespace App\Auth\Controller;
 
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 
-class DefaultController
+class DefaultController extends AbstractController
 {
-    #[Route('/', name: 'home', methods: ['GET'])]
-    public function index(): JsonResponse
+    #[Route('/', name: 'api_logs_test', methods: ['GET'])]
+    public function test(): JsonResponse
     {
-        return new JsonResponse([
+        return $this->json([
             'status' => 'ok',
-            'message' => 'AUTH Corbisier opérationnelle 🚀'
+            'service' => 'auth',
+            'message' => 'AUTH defaut',
         ]);
     }
 }
