@@ -67,7 +67,7 @@
             "ref": "e9481b233a11ef7e15fe055a2b21fd3ac1aa2bb7"
         },
         "files": [
-            "./config/packages/lexik_jwt_authentication.yaml"
+            "config/packages/lexik_jwt_authentication.yaml"
         ]
     },
     "nelmio/cors-bundle": {
@@ -91,10 +91,22 @@
             "ref": "ca0bc067abfb40a8de1b2561b96cbfc2b833c314"
         },
         "files": [
-            "./.env.test",
-            "./phpunit.dist.xml",
-            "./tests/bootstrap.php",
-            "./bin/phpunit"
+            ".env.test",
+            "phpunit.dist.xml",
+            "tests/bootstrap.php",
+            "bin/phpunit"
+        ]
+    },
+    "symfony/apache-pack": {
+        "version": "1.0",
+        "recipe": {
+            "repo": "github.com/symfony/recipes-contrib",
+            "branch": "main",
+            "version": "1.0",
+            "ref": "5d454ec6cc4c700ed3d963f3803e1d427d9669fb"
+        },
+        "files": [
+            "public/.htaccess"
         ]
     },
     "symfony/console": {

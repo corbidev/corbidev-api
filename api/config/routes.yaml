@@ -1,5 +1,21 @@
 # yaml-language-server: $schema=../vendor/symfony/routing/Loader/schema/routing.schema.json
 
+api_platform:
+    resource: routes/api_platform.yaml
+
+# =========================
+# 🔓 AUTH
+# =========================
+auth:
+    resource: routes/auth.yaml
+
+# =========================
+# 📊 API LOGS (controllers custom)
+# =========================
+api_logs:
+    resource: routes/api.yaml
+    
+
 # =========================
 # 🐱 API CORBYCATS
 # =========================

@@ -1,0 +1,18 @@
+<?php
+
+namespace App\Api\Logs\Controller
+
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\Routing\Annotation\Route;
+
+class DefaultController
+{
+    #[Route('/', name: 'home', methods: ['GET'])]
+    public function index(): JsonResponse
+    {
+        return new JsonResponse([
+            'status' => 'ok',
+            'message' => 'API Corbisier opérationnelle 🚀'
+        ]);
+    }
+}

@@ -1,0 +1,5 @@
+# routes/dev.yaml
+auth:
+  resource: ../../src/Auth/Controller/
+  type: attribute
+  host: '%auth_host%'
