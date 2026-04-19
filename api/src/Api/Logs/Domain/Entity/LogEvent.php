@@ -1,6 +1,11 @@
 <?php
 namespace App\Api\Logs\Domain\Entity;
 
+use App\Api\Logs\Domain\Entity\LogEnv;
+use App\Api\Logs\Domain\Entity\LogLevel;
+use App\Api\Logs\Domain\Entity\LogOrigin;
+use App\Api\Logs\Domain\Entity\LogErrorCode;
+use App\Api\Logs\Domain\Entity\LogEventDetail;
 use App\Api\Logs\Infrastructure\Repository\LogEventRepository;
 use App\Api\Logs\Application\Dto\CreateLogEventDto;
 use App\Api\Logs\Application\Processor\CreateLogProcessor;
