@@ -1,7 +1,9 @@
 <?php
 namespace App\Api\Logs\Domain\Entity;
 
-use App\Api\Logs\Repository\LogEventRepository;
+use App\Api\Logs\Infrastructure\Repository\LogEventRepository;
+use App\Api\Logs\Application\Dto\CreateLogEventDto;
+use App\Api\Logs\Application\Processor\CreateLogProcessor;
 use Doctrine\ORM\Mapping as ORM;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Post;
@@ -17,6 +19,11 @@ use ApiPlatform\Metadata\Post;
  * Evenement principal enregistre par le systeme de logs.
  */
 class LogEvent {
+
+   public function __construct()
+   {
+        $this->ts = new \DateTimeImmutable();
+   }
     /**
      * Identifiant technique de l'evenement.
      */

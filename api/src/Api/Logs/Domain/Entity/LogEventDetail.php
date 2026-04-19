@@ -1,32 +1,34 @@
 <?php
+
 namespace App\Api\Logs\Domain\Entity;
+
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'CBV_LOGS_EVENT_DETAIL')]
-/**
- * Charge utile detaillee associee a un evenement de log.
- */
-class LogEventDetail {
-    /**
-     * Identifiant technique du detail.
-     */
-    #[ORM\Id, ORM\GeneratedValue, ORM\Column(type: 'bigint')]
+class LogEventDetail
+{
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column(type: 'bigint')]
     private ?int $id = null;
 
     /**
-     * Evenement principal auquel le detail appartient.
+     * Relation propriétaire (owning side)
      */
-    #[ORM\OneToOne(inversedBy: 'detail'), ORM\JoinColumn(nullable: false, unique: true, onDelete: 'CASCADE')]
+    #[ORM\OneToOne(inversedBy: 'detail', targetEntity: LogEvent::class)]
+    #[ORM\JoinColumn(nullable: false, unique: true, onDelete: 'CASCADE')]
     private ?LogEvent $logEvent = null;
 
     /**
-     * Contexte brut serialise en JSON.
-     *
      * @var array<string, mixed>|null
      */
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $context = null;
+
+    // -------------------------
+    // GETTERS / SETTERS
+    // -------------------------
 
     public function getId(): ?int
     {
@@ -44,12 +46,18 @@ class LogEventDetail {
             return $this;
         }
 
-        $previousLogEvent = $this->logEvent;
-        $this->logEvent = $logEvent;
+        // Détacher ancien
+        if ($this->logEvent !== null) {
+            $old = $this->logEvent;
+            $this->logEvent = null;
 
-        if ($previousLogEvent !== null && $previousLogEvent->getDetail() === $this) {
-            $previousLogEvent->setDetail(null);
+            if ($old->getDetail() === $this) {
+                $old->setDetail(null);
+            }
         }
+
+        // Attacher nouveau
+        $this->logEvent = $logEvent;
 
         if ($logEvent !== null && $logEvent->getDetail() !== $this) {
             $logEvent->setDetail($this);
@@ -86,12 +94,16 @@ class LogEventDetail {
         return $this->context[$key] ?? $default;
     }
 
+    // -------------------------
+    // UTILS
+    // -------------------------
+
     public function __toString(): string
     {
-        if (!isset($this->logEvent)) {
+        if (!$this->logEvent) {
             return '';
         }
 
-        return sprintf('detail:%s', (string) ($this->logEvent->getId() ?? 'new'));
+        return sprintf('detail:%s', $this->logEvent->getId() ?? 'new');
     }
 }
