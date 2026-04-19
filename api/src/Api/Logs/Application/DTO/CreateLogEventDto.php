@@ -9,7 +9,8 @@ use ApiPlatform\Metadata\Post;
 #[ApiResource(
     operations: [
         new Post(
-            uriTemplate: '/logs'
+            uriTemplate: '/logs',
+            host: '%api_host%'
         )
     ]
 )]
