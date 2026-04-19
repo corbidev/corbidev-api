@@ -37,13 +37,6 @@ services:
             $dir: '%kernel.project_dir%/var/log_queue'
 
     # =========================
-    # 📊 Logs Consumer (CRON)
-    # =========================
-    App\Api\Logs\Application\Service\LogConsumer:
-        arguments:
-            $dir: '%kernel.project_dir%/var/log_queue'
-
-    # =========================
     # 🧠 Tenant Provider
     # =========================
     App\Api\Logs\Context\TenantProvider:
