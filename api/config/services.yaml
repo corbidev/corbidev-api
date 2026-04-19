@@ -3,6 +3,7 @@
 parameters:
     auth_host: '%env(AUTH_HOST)%'
     api_host: '%env(API_HOST)%'
+    cron_token: '%env(CRON_TOKEN)%'
 
 services:
 
@@ -29,22 +30,55 @@ services:
             $defaultLifetime: 3600
 
     # =========================
-    # 📊 Logs - TenantProvider
+    # 📁 File Queue Logs
+    # =========================
+    App\Api\Logs\Application\Service\FileLogQueueService:
+        arguments:
+            $dir: '%kernel.project_dir%/var/log_queue'
+
+    # =========================
+    # 📊 Logs Consumer (CRON)
+    # =========================
+    App\Api\Logs\Application\Service\LogConsumer:
+        arguments:
+            $dir: '%kernel.project_dir%/var/log_queue'
+
+    # =========================
+    # 🧠 Tenant Provider
     # =========================
     App\Api\Logs\Context\TenantProvider:
         arguments:
             $cache: '@tenant.cache'
 
     # =========================
-    # 📊 Error - Envoi api json
+    # ❌ API Error Listener
     # =========================
     App\EventListener\ApiErrorListener:
         tags:
             - { name: kernel.event_listener, event: kernel.exception, priority: 100 }
 
     # =========================
-    # 📊 Error - Mapping http status 
+    # 📊 HTTP Status Provider
     # =========================
     App\Http\HttpStatusProvider:
         arguments:
             $filePath: '%kernel.project_dir%/config/http_statuses.fr.json'
+
+    # =========================
+    # 🚀 CRON TASKS (AUTO TAG)
+    # =========================
+    App\Shared\Application\Cron\:
+        resource: '../src/Shared/Application/Cron/'
+        tags: ['app.cron_task']
+
+    App\Api\Logs\Application\Cron\:
+        resource: '../src/Api/Logs/Application/Cron/'
+        tags: ['app.cron_task']
+
+    # =========================
+    # 🎯 CRON CONTROLLER
+    # =========================
+    App\Shared\Infrastructure\Controller\CronController:
+        arguments:
+            $tasks: !tagged_iterator app.cron_task
+            $cronToken: '%cron_token%'

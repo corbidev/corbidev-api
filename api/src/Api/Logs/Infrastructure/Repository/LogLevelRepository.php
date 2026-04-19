@@ -15,6 +15,8 @@ class LogLevelRepository extends ServiceEntityRepository
 
     public function findOneByName(string $name): ?LogLevel
     {
-        return $this->findOneBy(['name' => strtoupper($name)]);
+        return $this->findOneBy([
+            'name' => strtoupper($name),
+        ]);
     }
 }

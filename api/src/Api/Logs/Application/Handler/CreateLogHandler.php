@@ -1,10 +1,9 @@
 <?php
+
 namespace App\Api\Logs\Application\Handler;
 
-use App\Api\Logs\Application\DTO\CreateLogEventDto;
 use App\Api\Logs\Application\Factory\LogEventFactory;
 use Doctrine\ORM\EntityManagerInterface;
-use App\Api\Logs\Domain\Entity\LogEvent;
 
 final class CreateLogHandler
 {
@@ -13,13 +12,10 @@ final class CreateLogHandler
         private EntityManagerInterface $em
     ) {}
 
-    public function handle(CreateLogEventDto $dto): LogEvent
+    public function handle(array $data): void
     {
-        $event = $this->factory->createFromDto($dto);
+        $event = $this->factory->createFromArray($data);
 
         $this->em->persist($event);
-        $this->em->flush();
-
-        return $event;
     }
 }

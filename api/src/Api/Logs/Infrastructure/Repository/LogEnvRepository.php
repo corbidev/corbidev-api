@@ -15,6 +15,8 @@ class LogEnvRepository extends ServiceEntityRepository
 
     public function findOneByName(string $name): ?LogEnv
     {
-        return $this->findOneBy(['name' => strtolower($name)]);
+        return $this->findOneBy([
+            'name' => strtolower($name),
+        ]);
     }
 }

@@ -15,6 +15,8 @@ class LogErrorCodeRepository extends ServiceEntityRepository
 
     public function findOneByCode(string $code): ?LogErrorCode
     {
-        return $this->findOneBy(['code' => strtoupper($code)]);
+        return $this->findOneBy([
+            'code' => strtoupper($code),
+        ]);
     }
 }
