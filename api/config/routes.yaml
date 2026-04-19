@@ -16,8 +16,8 @@ auth:
 # =========================
 # 📊 API LOGS (controllers custom)
 # =========================
-api_logs:
-    resource: routes/api.yaml
+#api_logs:
+#    resource: routes/api.yaml
     
 
 # =========================

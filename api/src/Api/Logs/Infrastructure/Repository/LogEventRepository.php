@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Api\Logs\Repository;
+namespace App\Api\Logs\Infrastructure\Repository;
 
-use App\Api\Logs\Entity\LogEvent;
+use App\Api\Logs\Domain\Entity\LogEvent;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\Persistence\ManagerRegistry;

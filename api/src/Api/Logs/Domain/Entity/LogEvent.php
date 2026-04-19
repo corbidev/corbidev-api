@@ -1,9 +1,16 @@
 <?php
-namespace App\Api\Logs\Entity;
+namespace App\Api\Logs\Domain\Entity;
 
 use App\Api\Logs\Repository\LogEventRepository;
 use Doctrine\ORM\Mapping as ORM;
+use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Post;
 
+#[ApiResource]
+#[Post(
+    input: CreateLogEventDto::class,
+    processor: CreateLogProcessor::class
+)]
 #[ORM\Entity(repositoryClass: LogEventRepository::class)]
 #[ORM\Table(name: 'CBV_LOGS_EVENT')]
 /**

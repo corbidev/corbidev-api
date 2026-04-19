@@ -1,5 +1,5 @@
 <?php
-namespace App\Api\Logs\Entity;
+namespace App\Api\Logs\Domain\Entity;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
