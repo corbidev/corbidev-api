@@ -6,6 +6,8 @@ use App\Http\HttpStatusProvider;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Event\ExceptionEvent;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+use Symfony\Component\Validator\Exception\ValidationFailedException;
+use ApiPlatform\Validator\Exception\ValidationException as ApiValidationException;
 use Psr\Log\LoggerInterface;
 
 class ApiErrorListener
@@ -18,23 +20,37 @@ class ApiErrorListener
     public function onKernelException(ExceptionEvent $event): void
     {
         $exception = $event->getThrowable();
+
+        // 🔥 CRITIQUE → laisser API Platform gérer les erreurs de validation
+        if (
+            $exception instanceof ValidationFailedException ||
+            $exception instanceof ApiValidationException
+        ) {
+            return;
+        }
+
         $request = $event->getRequest();
 
         $status = $this->resolveStatusCode($exception);
         $statusData = $this->statusProvider->get($status);
 
-        // 🔥 LOG ICI (IMPORTANT)
+        $logContext = [
+            'status' => $status,
+            'message' => $exception->getMessage(),
+            'route' => $request->getPathInfo(),
+            'method' => $request->getMethod(),
+            'ip' => $request->getClientIp(),
+        ];
+
+        // 🔥 LOG STRUCTURÉ
         if ($status >= 500) {
-            $this->logger->error('API Exception', [
-                'status' => $status,
-                'message' => $exception->getMessage(),
-                'route' => $request->getPathInfo(),
-                'method' => $request->getMethod(),
-                'ip' => $request->getClientIp(),
+            $this->logger->error('API Exception', $logContext + [
                 'file' => $exception->getFile(),
                 'line' => $exception->getLine(),
                 'trace' => $exception->getTraceAsString(),
             ]);
+        } else {
+            $this->logger->warning('API Client Error', $logContext);
         }
 
         $responseData = [

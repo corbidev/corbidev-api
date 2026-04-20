@@ -1,3 +1,5 @@
+<?php
+
 namespace App\Api\Logs\Domain\Entity;
 
 use Doctrine\Common\Collections\ArrayCollection;

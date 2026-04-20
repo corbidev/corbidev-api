@@ -4,11 +4,11 @@ namespace App\Api\Logs\Domain\Entity;
 
 use App\Api\Logs\Infrastructure\Repository\LogEventRepository;
 use Doctrine\ORM\Mapping as ORM;
-use ApiPlatform\Metadata\ApiResource;
-use ApiPlatform\Metadata\Post;
 
-#[ApiResource]
-#[Post]
+use App\Api\Logs\Domain\Entity\LogEnv;
+use App\Api\Logs\Domain\Entity\LogLevel;
+use App\Api\Logs\Domain\Entity\LogErrorCode;
+
 #[ORM\Entity(repositoryClass: LogEventRepository::class)]
 #[ORM\Table(name: 'CBV_LOGS_EVENT')]
 #[ORM\UniqueConstraint(name: 'uniq_external_id', columns: ['externalId'])]
@@ -22,28 +22,47 @@ class LogEvent
         $this->ts = new \DateTimeImmutable();
     }
 
+    // -------------------------
+    // IDENTIFIANT
+    // -------------------------
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: 'bigint')]
     private ?int $id = null;
 
-    // 🔥 UUID CLIENT
+    /**
+     * UUID fourni par le client (idempotence)
+     */
     #[ORM\Column(length: 36, unique: true)]
     private string $externalId;
+
+    // -------------------------
+    // TEMPS
+    // -------------------------
 
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $ts;
 
-    #[ORM\ManyToOne]
+    // -------------------------
+    // RELATIONS (lookup tables)
+    // -------------------------
+
+    #[ORM\ManyToOne(targetEntity: LogLevel::class)]
     #[ORM\JoinColumn(nullable: false)]
     private LogLevel $level;
 
-    #[ORM\ManyToOne]
+    #[ORM\ManyToOne(targetEntity: LogEnv::class)]
     #[ORM\JoinColumn(nullable: false)]
     private LogEnv $env;
 
-    #[ORM\ManyToOne]
+    #[ORM\ManyToOne(targetEntity: LogErrorCode::class)]
+    #[ORM\JoinColumn(nullable: true)]
     private ?LogErrorCode $errorCodeEntity = null;
+
+    // -------------------------
+    // DONNÉES DUPLIQUÉES (PERF)
+    // -------------------------
 
     #[ORM\Column(length: 50)]
     private string $levelName = '';
@@ -72,6 +91,10 @@ class LogEvent
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $context = null;
 
+    // -------------------------
+    // DONNÉES PRINCIPALES
+    // -------------------------
+
     #[ORM\Column(length: 1024)]
     private string $message;
 
@@ -85,25 +108,50 @@ class LogEvent
     private string $fingerprint;
 
     // -------------------------
-    // GETTERS / SETTERS
+    // GETTERS
     // -------------------------
 
     public function getId(): ?int { return $this->id; }
-
     public function getExternalId(): string { return $this->externalId; }
+    public function getTs(): \DateTimeImmutable { return $this->ts; }
+    public function getLevel(): LogLevel { return $this->level; }
+    public function getEnv(): LogEnv { return $this->env; }
+    public function getErrorCodeEntity(): ?LogErrorCode { return $this->errorCodeEntity; }
+
+    public function getDomain(): ?string { return $this->domain; }
+    public function getUri(): ?string { return $this->uri; }
+    public function getMethod(): ?string { return $this->method; }
+    public function getClient(): ?string { return $this->client; }
+    public function getVersion(): ?string { return $this->version; }
+    public function getContext(): ?array { return $this->context; }
+
+    public function getMessage(): string { return $this->message; }
+    public function getUserId(): ?int { return $this->userId; }
+    public function getHttpStatus(): ?int { return $this->httpStatus; }
+    public function getFingerprint(): string { return $this->fingerprint; }
+
+    // -------------------------
+    // SETTERS
+    // -------------------------
 
     public function setExternalId(string $externalId): self
     {
-        $this->externalId = trim($externalId);
+        $externalId = trim($externalId);
+
+        if ($externalId === '') {
+            throw new \InvalidArgumentException('ExternalId cannot be empty');
+        }
+
+        $this->externalId = $externalId;
+
         return $this;
     }
-
-    public function getTs(): \DateTimeImmutable { return $this->ts; }
 
     public function setLevel(LogLevel $level): self
     {
         $this->level = $level;
         $this->levelName = $level->getName();
+
         return $this;
     }
 
@@ -111,6 +159,7 @@ class LogEvent
     {
         $this->env = $env;
         $this->envName = $env->getName();
+
         return $this;
     }
 
@@ -118,6 +167,7 @@ class LogEvent
     {
         $this->errorCodeEntity = $errorCode;
         $this->errorCode = $errorCode?->getCode();
+
         return $this;
     }
 
@@ -160,9 +210,11 @@ class LogEvent
     public function setMessage(string $message): self
     {
         $message = trim($message);
+
         if ($message === '') {
             throw new \InvalidArgumentException('Message cannot be empty');
         }
+
         $this->message = $message;
         return $this;
     }
@@ -182,10 +234,34 @@ class LogEvent
     public function setFingerprint(string $fingerprint): self
     {
         $fingerprint = trim($fingerprint);
+
         if ($fingerprint === '') {
             throw new \InvalidArgumentException('Fingerprint cannot be empty');
         }
+
         $this->fingerprint = $fingerprint;
         return $this;
+    }
+
+    // -------------------------
+    // MÉTIER
+    // -------------------------
+
+    public function isError(): bool
+    {
+        return in_array(
+            $this->levelName,
+            ['ERROR', 'CRITICAL', 'ALERT', 'EMERGENCY'],
+            true
+        );
+    }
+
+    // -------------------------
+    // UTILS
+    // -------------------------
+
+    public function __toString(): string
+    {
+        return sprintf('%s: %s', $this->levelName ?: '?', $this->message ?: '');
     }
 }
