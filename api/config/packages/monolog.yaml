@@ -1,78 +1,25 @@
 monolog:
-    channels: ['app', 'business']
+    handlers:
 
-# -------------------------
-# DEV
-# -------------------------
-when@dev:
-    monolog:
-        handlers:
+        main:
+            type: stream
+            path: "%kernel.logs_dir%/app.log"
+            level: debug
+            formatter: monolog.formatter.json
 
-            # logs techniques
-            main:
-                type: stream
-                path: "%kernel.logs_dir%/dev.log"
-                level: debug
-                channels: ["!event"]
+        error:
+            type: stream
+            path: "%kernel.logs_dir%/error.log"
+            level: error
+            formatter: monolog.formatter.json
 
-            # 🔥 erreurs 500 horodatées (appelées dynamiquement)
-            error_file:
-                type: stream
-                path: "%kernel.logs_dir%/error.log"
-                level: error
+        business:
+            type: stream
+            path: "%kernel.logs_dir%/business.log"
+            level: info
+            channels: ["business"]
+            formatter: monolog.formatter.json
 
-            # 🔥 logs métier
-            business:
-                type: stream
-                path: "%kernel.logs_dir%/business.log"
-                level: info
-                channels: ["business"]
-
-            console:
-                type: console
-                process_psr_3_messages: false
-                channels: ["!event", "!doctrine", "!console"]
-
-# -------------------------
-# PROD
-# -------------------------
-when@prod:
-    monolog:
-        handlers:
-
-            main:
-                type: fingers_crossed
-                action_level: error
-                handler: nested
-                excluded_http_codes: [404, 405]
-                buffer_size: 50
-
-            nested:
-                type: stream
-                path: php://stderr
-                level: debug
-                formatter: monolog.formatter.json
-
-            # 🔥 erreurs 500 (fallback)
-            error_file:
-                type: stream
-                path: "%kernel.logs_dir%/error.log"
-                level: error
-
-            # 🔥 logs métier
-            business:
-                type: stream
-                path: "%kernel.logs_dir%/business.log"
-                level: info
-                channels: ["business"]
-
-            console:
-                type: console
-                process_psr_3_messages: false
-                channels: ["!event", "!doctrine"]
-
-            deprecation:
-                type: stream
-                channels: [deprecation]
-                path: php://stderr
-                formatter: monolog.formatter.json
+        console:
+            type: console
+            process_psr_3_messages: false

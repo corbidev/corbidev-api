@@ -1,5 +1,3 @@
-# config/services.yaml
-
 parameters:
     auth_host: '%env(AUTH_HOST)%'
     api_host: '%env(API_HOST)%'
@@ -44,7 +42,7 @@ services:
             $cache: '@tenant.cache'
 
     # =========================
-    # ❌ API Error Listener
+    # 🔥 API Error Listener (CENTRAL)
     # =========================
     App\EventListener\ApiErrorListener:
         tags:
@@ -56,5 +54,3 @@ services:
     App\Http\HttpStatusProvider:
         arguments:
             $filePath: '%kernel.project_dir%/config/http_statuses.fr.json'
-
-
