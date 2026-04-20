@@ -26,11 +26,11 @@ final class CreateLogEventDto
     public string $message;
 
     #[Assert\NotBlank]
-    #[Assert\Choice(['INFO','WARNING','ERROR','CRITICAL','ALERT','EMERGENCY'])]
+    #[Assert\Choice(choices: ['INFO','WARNING','ERROR','CRITICAL','ALERT','EMERGENCY'])]
     public string $level;
 
     #[Assert\NotBlank]
-    #[Assert\Choice(['dev','test','prod'])]
+    #[Assert\Choice(choices: ['dev','test','prod'])]
     public string $env;
 
     #[Assert\NotBlank]
