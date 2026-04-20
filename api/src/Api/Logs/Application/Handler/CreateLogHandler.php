@@ -2,6 +2,7 @@
 
 namespace App\Api\Logs\Application\Handler;
 
+use App\Api\Logs\Application\DTO\CreateLogEventDto;
 use App\Api\Logs\Application\Factory\LogEventFactory;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -12,10 +13,12 @@ final class CreateLogHandler
         private EntityManagerInterface $em
     ) {}
 
-    public function handle(array $data): void
+    public function handle(CreateLogEventDto $dto): void
     {
-        $event = $this->factory->createFromArray($data);
+        // 🔥 création de l'entité via DTO (typé, fiable)
+        $event = $this->factory->createFromDto($dto);
 
+        // 🔥 indispensable pour Doctrine
         $this->em->persist($event);
     }
 }

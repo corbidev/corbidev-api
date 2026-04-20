@@ -7,6 +7,8 @@ use App\Api\Logs\Domain\Entity\LogLevel;
 use App\Api\Logs\Domain\Entity\LogEnv;
 use App\Api\Logs\Domain\Entity\LogErrorCode;
 
+use App\Api\Logs\Application\DTO\CreateLogEventDto;
+
 use App\Api\Logs\Infrastructure\Repository\LogLevelRepository;
 use App\Api\Logs\Infrastructure\Repository\LogEnvRepository;
 use App\Api\Logs\Infrastructure\Repository\LogErrorCodeRepository;
@@ -26,19 +28,19 @@ class LogEventFactory
     private array $envCache = [];
     private array $errorCodeCache = [];
 
-    public function createFromArray(array $data): LogEvent
+    public function createFromDto(CreateLogEventDto $dto): LogEvent
     {
         $event = new LogEvent();
 
         // -------------------------
-        // ID (UUID client)
+        // UUID CLIENT
         // -------------------------
-        $event->setIngestionId($data['id']);
+        $event->setExternalId($dto->externalId);
 
         // -------------------------
         // LEVEL
         // -------------------------
-        $levelKey = strtoupper($data['level']);
+        $levelKey = strtoupper($dto->level);
 
         $level = $this->levelCache[$levelKey]
             ??= $this->levelRepo->findOneByName($levelKey)
@@ -49,7 +51,7 @@ class LogEventFactory
         // -------------------------
         // ENV
         // -------------------------
-        $envKey = strtolower($data['env']);
+        $envKey = strtolower($dto->env);
 
         $env = $this->envCache[$envKey]
             ??= $this->envRepo->findOneByName($envKey)
@@ -60,8 +62,8 @@ class LogEventFactory
         // -------------------------
         // ERROR CODE
         // -------------------------
-        if (!empty($data['errorCode'])) {
-            $codeKey = strtoupper($data['errorCode']);
+        if (!empty($dto->errorCode)) {
+            $codeKey = strtoupper($dto->errorCode);
 
             $errorCode = $this->errorCodeCache[$codeKey]
                 ??= $this->errorCodeRepo->findOneByCode($codeKey)
@@ -74,22 +76,20 @@ class LogEventFactory
         // DATA
         // -------------------------
 
-        $event->setDomain($data['domain']);
-        $event->setUri($data['uri'] ?? null);
-        $event->setMethod($data['method'] ?? null);
-        $event->setIp($data['ip'] ?? null);
+        $event->setDomain($dto->domain);
+        $event->setUri($dto->uri);
+        $event->setMethod($dto->method);
+        $event->setClient($dto->client);
+        $event->setVersion($dto->version);
 
-        $event->setClient($data['client'] ?? null);
-        $event->setVersion($data['version'] ?? null);
+        $event->setMessage($dto->message);
+        $event->setFingerprint($dto->fingerprint);
 
-        $event->setMessage($data['message']);
-        $event->setFingerprint($data['fingerprint']);
+        $event->setUserId($dto->userId);
+        $event->setHttpStatus($dto->httpStatus);
 
-        $event->setUserId($data['userId'] ?? null);
-        $event->setHttpStatus($data['httpStatus'] ?? null);
-
-        if (!empty($data['context'])) {
-            $event->setContext($data['context']);
+        if (!empty($dto->context)) {
+            $event->setContext($dto->context);
         }
 
         return $event;
