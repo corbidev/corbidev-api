@@ -1,5 +1,5 @@
 {
-  "id": "uuid",
+  "externalId": "uuid",
 
   "domain": "corbisier.fr",
   "uri": "/login",

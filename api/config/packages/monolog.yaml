@@ -1,6 +1,6 @@
 monolog:
+    channels: ['business']
     handlers:
-
         main:
             type: stream
             path: "%kernel.logs_dir%/app.log"
