@@ -52,7 +52,7 @@ class LogEvent
     #[ORM\JoinColumn(nullable: false)]
     private LogLevel $level;
 
-    #[ORM\ManyToOne(targetEntity: LogEnv::class)]
+    #[ORM\ManyToOne(targetEntity: LogEnv::class, inversedBy: 'events')]
     #[ORM\JoinColumn(nullable: false)]
     private LogEnv $env;
 
