@@ -10,13 +10,18 @@ final class ApiError
         private readonly ErrorCode $code,
         private readonly string $message,
         private readonly array $details = [],
-        private readonly ?string $businessCode = null
+        private readonly ?BusinessErrorCode $businessCode = null
     ) {
     }
 
     public function getCode(): ErrorCode
     {
         return $this->code;
+    }
+
+    public function getBusinessCode(): ?BusinessErrorCode
+    {
+        return $this->businessCode;
     }
 
     public function getMessage(): string
@@ -29,18 +34,13 @@ final class ApiError
         return $this->details;
     }
 
-    public function getBusinessCode(): ?string
-    {
-        return $this->businessCode;
-    }
-
     public function toArray(): array
     {
         return [
             'success' => false,
             'error' => [
                 'code' => $this->code->value,
-                'business_code' => $this->businessCode,
+                'business_code' => $this->businessCode?->value,
                 'message' => $this->message,
                 'details' => $this->details,
             ],
@@ -61,8 +61,11 @@ final class ApiError
         );
     }
 
-    public static function domain(string $message, array $details = [], ?string $businessCode = null): self
-    {
+    public static function domain(
+        string $message,
+        array $details = [],
+        ?BusinessErrorCode $businessCode = null
+    ): self {
         return new self(
             ErrorCode::DOMAIN_ERROR,
             $message,
@@ -79,8 +82,10 @@ final class ApiError
         );
     }
 
-    public static function alreadyExists(string $message = 'Resource already exists', ?string $businessCode = null): self
-    {
+    public static function alreadyExists(
+        string $message = 'Resource already exists',
+        ?BusinessErrorCode $businessCode = null
+    ): self {
         return new self(
             ErrorCode::RESOURCE_ALREADY_EXISTS,
             $message,
