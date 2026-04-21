@@ -1,0 +1,66 @@
+parameters:
+    business_errors:
+
+        GEN_001:
+            domain: global
+            code: VALIDATION_FAILED
+            message: Validation failed
+            description: One or more fields are invalid
+            http_status: 400
+
+        GEN_999:
+            domain: global
+            code: UNKNOWN_ERROR
+            message: Unexpected error
+            description: An unexpected internal error occurred
+            http_status: 500
+
+  # =========================
+  # 🧠 LOG DOMAIN
+  # =========================
+
+        LOG_001:
+            domain: log
+            code: LOG_ALREADY_EXISTS
+            message: Log already exists
+            description: A log with this externalId already exists
+            http_status: 409
+
+        LOG_002:
+            domain: log
+            code: LOG_INVALID_LEVEL
+            message: Invalid log level
+            description: Provided log level is not supported
+            http_status: 400
+
+        LOG_003:
+            domain: log
+            code: LOG_INVALID_ENV
+            message: Invalid environment
+            description: Provided environment is not supported
+            http_status: 400
+
+  # =========================
+  # 👤 USER DOMAIN
+  # =========================
+
+        USER_001:
+            domain: user
+            code: USER_NOT_FOUND
+            message: User not found
+            description: The requested user does not exist
+            http_status: 404
+
+        AUTH_001:
+            domain: auth
+            code: AUTH_INVALID_TOKEN
+            message: Invalid token
+            description: Authentication token is invalid
+            http_status: 401
+
+        AUTH_002:
+            domain: auth
+            code: AUTH_EXPIRED_TOKEN
+            message: Token expired
+            description: Authentication token has expired
+            http_status: 401
