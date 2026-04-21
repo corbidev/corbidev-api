@@ -1,0 +1,74 @@
+security:
+
+    enable_authenticator_manager: true
+
+    password_hashers:
+        App\Auth\Entity\User:
+            algorithm: auto
+
+    providers:
+        auth_user_provider:
+            entity:
+                class: App\Auth\Entity\User
+                property: email
+
+    firewalls:
+
+        # =========================
+        # 🔧 DEV (profiler, assets…)
+        # =========================
+        dev:
+            pattern: ^/(_profiler|_wdt|assets|build)/
+            security: false
+
+        # =========================
+        # 🌐 API (JWT - stateless)
+        # =========================
+        api:
+            pattern: ^/
+            host: '%env(API_HOST_REGEX)%'
+            stateless: true
+            provider: auth_user_provider
+
+            jwt: ~
+
+        # =========================
+        # 🔐 AUTH (login + session)
+        # =========================
+        auth:
+            pattern: ^/
+            host: '%env(AUTH_HOST_REGEX)%'
+            provider: auth_user_provider
+            lazy: true
+            stateless: false
+
+            form_login:
+                login_path: /login
+                check_path: /login
+                enable_csrf: true
+
+            logout:
+                path: /logout
+
+    access_control:
+
+        # =========================
+        # 🌐 PUBLIC
+        # =========================
+        - { path: ^/$, roles: PUBLIC_ACCESS }
+        - { path: ^/login, roles: PUBLIC_ACCESS }
+
+        # =========================
+        # 🔑 AUTH API (login JWT)
+        # =========================
+        - { path: ^/api/login, roles: PUBLIC_ACCESS }
+
+        # =========================
+        # 🔐 API PROTÉGÉE
+        # =========================
+        - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
+
+        # =========================
+        # 🔐 AUTH PROTÉGÉ
+        # =========================
+        - { path: ^/, roles: IS_AUTHENTICATED_FULLY }

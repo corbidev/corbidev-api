@@ -30,5 +30,5 @@ doctrine:
 
           Logs:
             is_bundle: false
-            dir: '%kernel.project_dir%/src/Api/Logs/Entity'
-            prefix: 'App\Api\Logs\Entity'
+            dir: '%kernel.project_dir%/src/Api/Logs/Domain/Entity'
+            prefix: 'App\Api\Logs\Domain\Entity'

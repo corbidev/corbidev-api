@@ -1,8 +1,7 @@
-# config/services.yaml
-
 parameters:
     auth_host: '%env(AUTH_HOST)%'
     api_host: '%env(API_HOST)%'
+    cron_token: '%env(CRON_TOKEN)%'
 
 services:
 
@@ -10,7 +9,9 @@ services:
         autowire: true
         autoconfigure: true
 
-    # 🔥 Chargement global
+    # =========================
+    # 🔥 Chargement automatique de l'app
+    # =========================
     App\:
         resource: '../src/'
         exclude:
@@ -27,8 +28,29 @@ services:
             $defaultLifetime: 3600
 
     # =========================
-    # 📊 Logs - TenantProvider
+    # 📁 File Queue Logs
+    # =========================
+    App\Api\Logs\Application\Service\FileLogQueueService:
+        arguments:
+            $dir: '%kernel.project_dir%/var/log_queue'
+
+    # =========================
+    # 🧠 Tenant Provider
     # =========================
     App\Api\Logs\Context\TenantProvider:
         arguments:
             $cache: '@tenant.cache'
+
+    # =========================
+    # 🔥 API Error Listener (CENTRAL)
+    # =========================
+    App\EventListener\ApiErrorListener:
+        tags:
+            - { name: kernel.event_listener, event: kernel.exception, priority: 100 }
+
+    # =========================
+    # 📊 HTTP Status Provider
+    # =========================
+    App\Http\HttpStatusProvider:
+        arguments:
+            $filePath: '%kernel.project_dir%/config/http_statuses.fr.json'

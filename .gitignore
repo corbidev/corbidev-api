@@ -25,3 +25,4 @@ database/*
 !database/sql/
 api_*/
 temp/
+*.zip
