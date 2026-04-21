@@ -9,7 +9,6 @@ use App\Shared\Domain\Error\DomainException;
 use App\Shared\Domain\Error\ErrorCode;
 use App\Shared\Domain\Error\BusinessErrorCode;
 use App\Shared\Infrastructure\Error\BusinessErrorRegistry;
-use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\Validator\Exception\ValidationFailedException;
 use ApiPlatform\Validator\Exception\ValidationException as ApiValidationException;
@@ -59,17 +58,6 @@ final class ExceptionMapper
         }
 
         // =========================
-        // 🗄️ Doctrine unique
-        // =========================
-        if ($exception instanceof UniqueConstraintViolationException) {
-            return $this->uniqueConstraintError(
-                BusinessErrorCode::LOG_ALREADY_EXISTS,
-                'externalId',
-                'This externalId already exists'
-            );
-        }
-
-        // =========================
         // 🌐 HTTP Symfony
         // =========================
         if ($exception instanceof HttpExceptionInterface) {
@@ -77,7 +65,7 @@ final class ExceptionMapper
         }
 
         // =========================
-        // ❌ Fallback
+        // ❌ Fallback (infra / DB / inconnue)
         // =========================
         return $this->businessError(
             ErrorCode::UNKNOWN_ERROR,
@@ -135,29 +123,6 @@ final class ExceptionMapper
     }
 
     // =========================
-    // 🔥 UNIQUE CONSTRAINT (amélioration clé)
-    // =========================
-    private function uniqueConstraintError(
-        BusinessErrorCode $businessCode,
-        string $field,
-        string $message
-    ): ApiError {
-        return new ApiError(
-            ErrorCode::RESOURCE_ALREADY_EXISTS,
-            $this->registry->getMessage($businessCode),
-            [
-                $field => [
-                    [
-                        'code' => 'ALREADY_EXISTS',
-                        'message' => $message
-                    ]
-                ]
-            ],
-            $businessCode
-        );
-    }
-
-    // =========================
     // 🧩 Format des violations
     // =========================
     private function formatViolations(iterable $violations): array
@@ -196,7 +161,7 @@ final class ExceptionMapper
     private function mapHttpException(HttpExceptionInterface $exception): ApiError
     {
         return match ($exception->getStatusCode()) {
-            404 => $this->businessError(ErrorCode::RESOURCE_NOT_FOUND, BusinessErrorCode::USER_NOT_FOUND),
+            404 => $this->businessError(ErrorCode::RESOURCE_NOT_FOUND, BusinessErrorCode::UNKNOWN_ERROR),
             403 => new ApiError(ErrorCode::FORBIDDEN, 'Access denied'),
             401 => new ApiError(ErrorCode::UNAUTHORIZED, 'Unauthorized'),
             405 => new ApiError(ErrorCode::METHOD_NOT_ALLOWED, 'Method not allowed'),

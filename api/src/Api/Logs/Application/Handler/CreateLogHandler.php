@@ -4,29 +4,39 @@ namespace App\Api\Logs\Application\Handler;
 
 use App\Api\Logs\Application\DTO\CreateLogEventDto;
 use App\Api\Logs\Application\Factory\LogEventFactory;
+use App\Api\Logs\Domain\Service\LogValidator;
 use App\Shared\Domain\Error\DomainException;
-use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 
 final class CreateLogHandler
 {
     public function __construct(
-        private LogEventFactory $factory,
-        private EntityManagerInterface $em
+        private readonly LogEventFactory $factory,
+        private readonly EntityManagerInterface $em,
+        private readonly LogValidator $validator
     ) {}
 
     public function handle(CreateLogEventDto $dto): void
     {
-        // 🔥 création de l'entité via DTO (typé, fiable)
+        // =========================
+        // 🧠 Validation métier AVANT persistence
+        // =========================
+        $this->validator->validateUniqueExternalId($dto->externalId);
+
+        // =========================
+        // 🏗️ Création entité
+        // =========================
         $event = $this->factory->createFromDto($dto);
 
         $this->em->persist($event);
 
+        // =========================
+        // 💾 Persistence
+        // =========================
         try {
             $this->em->flush();
-        } catch (UniqueConstraintViolationException $e) {
-            throw DomainException::alreadyExists('Log already exists');
         } catch (\Throwable $e) {
+            // ⚠️ fallback uniquement (DB / infra)
             throw DomainException::database('Unable to persist log');
         }
     }
