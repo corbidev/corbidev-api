@@ -12,7 +12,7 @@ class DomainException extends RuntimeException
         private readonly ErrorCode $errorCode,
         string $message = '',
         private readonly array $details = [],
-        private readonly ?string $businessCode = null,
+        private readonly ?BusinessErrorCode $businessCode = null,
         ?\Throwable $previous = null
     ) {
         parent::__construct($message, 0, $previous);
@@ -28,7 +28,7 @@ class DomainException extends RuntimeException
         return $this->details;
     }
 
-    public function getBusinessCode(): ?string
+    public function getBusinessCode(): ?BusinessErrorCode
     {
         return $this->businessCode;
     }
@@ -37,28 +37,62 @@ class DomainException extends RuntimeException
     // 🏭 Factories métier
     // =========================
 
-    public static function notFound(string $message = 'Resource not found', ?string $businessCode = null): self
-    {
-        return new self(ErrorCode::RESOURCE_NOT_FOUND, $message, [], $businessCode);
+    public static function notFound(
+        string $message = 'Resource not found',
+        ?BusinessErrorCode $businessCode = null
+    ): self {
+        return new self(
+            ErrorCode::RESOURCE_NOT_FOUND,
+            $message,
+            [],
+            $businessCode
+        );
     }
 
-    public static function alreadyExists(string $message = 'Resource already exists', ?string $businessCode = null): self
-    {
-        return new self(ErrorCode::RESOURCE_ALREADY_EXISTS, $message, [], $businessCode);
+    public static function alreadyExists(
+        string $message = 'Resource already exists',
+        array $details = [],
+        ?BusinessErrorCode $businessCode = null
+    ): self {
+        return new self(
+            ErrorCode::RESOURCE_ALREADY_EXISTS,
+            $message,
+            $details,
+            $businessCode
+        );
     }
 
-    public static function validation(array $details, string $message = 'Validation failed', ?string $businessCode = null): self
-    {
-        return new self(ErrorCode::VALIDATION_ERROR, $message, $details, $businessCode);
+    public static function validation(
+        array $details,
+        string $message = 'Invalid input',
+        ?BusinessErrorCode $businessCode = BusinessErrorCode::VALIDATION_FAILED
+    ): self {
+        return new self(
+            ErrorCode::VALIDATION_ERROR,
+            $message,
+            $details,
+            $businessCode
+        );
     }
 
-    public static function database(string $message = 'Database error', ?string $businessCode = null): self
-    {
-        return new self(ErrorCode::DATABASE_ERROR, $message, [], $businessCode);
+    public static function database(
+        string $message = 'Database error'
+    ): self {
+        return new self(
+            ErrorCode::DATABASE_ERROR,
+            $message
+        );
     }
 
-    public static function generic(string $message = 'Domain error', ?string $businessCode = null): self
-    {
-        return new self(ErrorCode::DOMAIN_ERROR, $message, [], $businessCode);
+    public static function generic(
+        string $message = 'Domain error',
+        ?BusinessErrorCode $businessCode = null
+    ): self {
+        return new self(
+            ErrorCode::DOMAIN_ERROR,
+            $message,
+            [],
+            $businessCode
+        );
     }
 }
