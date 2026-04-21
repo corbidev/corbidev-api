@@ -21,7 +21,7 @@ final class ExceptionMapper
     ) {}
 
     // =========================
-    // 🔥 NOUVEAU : retourne error + status
+    // 🔥 retourne error + status
     // =========================
     public function mapWithStatus(\Throwable $exception): array
     {
@@ -33,33 +33,52 @@ final class ExceptionMapper
 
     public function map(\Throwable $exception): ApiError
     {
+        // =========================
+        // 📥 Validation Symfony
+        // =========================
         if ($exception instanceof ValidationFailedException) {
             return $this->validationError(
                 $this->formatViolations($exception->getViolations())
             );
         }
 
+        // =========================
+        // 📥 Validation API Platform
+        // =========================
         if ($exception instanceof ApiValidationException) {
             return $this->validationError(
                 $this->formatViolations($exception->getConstraintViolationList())
             );
         }
 
+        // =========================
+        // 🧠 Domaine
+        // =========================
         if ($exception instanceof DomainException) {
             return $this->domainError($exception);
         }
 
+        // =========================
+        // 🗄️ Doctrine unique
+        // =========================
         if ($exception instanceof UniqueConstraintViolationException) {
-            return $this->businessError(
-                ErrorCode::RESOURCE_ALREADY_EXISTS,
-                BusinessErrorCode::LOG_ALREADY_EXISTS
+            return $this->uniqueConstraintError(
+                BusinessErrorCode::LOG_ALREADY_EXISTS,
+                'externalId',
+                'This externalId already exists'
             );
         }
 
+        // =========================
+        // 🌐 HTTP Symfony
+        // =========================
         if ($exception instanceof HttpExceptionInterface) {
             return $this->mapHttpException($exception);
         }
 
+        // =========================
+        // ❌ Fallback
+        // =========================
         return $this->businessError(
             ErrorCode::UNKNOWN_ERROR,
             BusinessErrorCode::UNKNOWN_ERROR
@@ -116,6 +135,29 @@ final class ExceptionMapper
     }
 
     // =========================
+    // 🔥 UNIQUE CONSTRAINT (amélioration clé)
+    // =========================
+    private function uniqueConstraintError(
+        BusinessErrorCode $businessCode,
+        string $field,
+        string $message
+    ): ApiError {
+        return new ApiError(
+            ErrorCode::RESOURCE_ALREADY_EXISTS,
+            $this->registry->getMessage($businessCode),
+            [
+                $field => [
+                    [
+                        'code' => 'ALREADY_EXISTS',
+                        'message' => $message
+                    ]
+                ]
+            ],
+            $businessCode
+        );
+    }
+
+    // =========================
     // 🧩 Format des violations
     // =========================
     private function formatViolations(iterable $violations): array
@@ -166,7 +208,7 @@ final class ExceptionMapper
     }
 
     // =========================
-    // 🔥 NOUVEAU : HTTP depuis YAML
+    // 🔥 HTTP depuis YAML
     // =========================
     private function resolveHttpStatus(ApiError $error): int
     {
