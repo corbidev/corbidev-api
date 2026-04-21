@@ -1,3 +1,8 @@
+# config/services.yaml
+
+imports:
+    - { resource: errors/business_errors.yaml }
+
 parameters:
     auth_host: '%env(AUTH_HOST)%'
     api_host: '%env(API_HOST)%'
@@ -10,13 +15,21 @@ services:
         autoconfigure: true
 
     # =========================
-    # 🔥 Chargement automatique de l'app
+    # 🔥 Auto-loading global
     # =========================
     App\:
         resource: '../src/'
         exclude:
             - '../src/DependencyInjection/'
             - '../src/Kernel.php'
+
+    # =========================
+    # 🧠 Domain (Logs)
+    # =========================
+    App\Api\Logs\Domain\Service\LogValidator: ~
+
+    App\Api\Logs\Domain\Repository\LogRepositoryInterface:
+        alias: App\Api\Logs\Infrastructure\Repository\DoctrineLogRepository
 
     # =========================
     # 🧠 Cache Tenant
@@ -42,11 +55,30 @@ services:
             $cache: '@tenant.cache'
 
     # =========================
-    # 🔥 API Error Listener (CENTRAL)
+    # 🔥 API Exception Listener (CENTRAL)
     # =========================
-    App\EventListener\ApiErrorListener:
+    App\Shared\Infrastructure\Exception\ApiExceptionListener:
+        arguments:
+            $mapper: '@App\Shared\Infrastructure\Exception\ExceptionMapper'
+            $responseFactory: '@App\Shared\Infrastructure\Http\JsonResponseFactory'
         tags:
             - { name: kernel.event_listener, event: kernel.exception, priority: 100 }
+
+    # =========================
+    # 📦 Business Error Registry
+    # =========================
+    App\Shared\Infrastructure\Error\BusinessErrorRegistry:
+        arguments:
+            $business_errors: '%business_errors%'
+
+    # =========================
+    # 🔥 Swagger OpenAPI Decorator
+    # =========================
+    App\Shared\Infrastructure\Swagger\OpenApiFactoryDecorator:
+        decorates: 'api_platform.openapi.factory'
+        arguments:
+            - '@App\Shared\Infrastructure\Swagger\OpenApiFactoryDecorator.inner'
+            - '@App\Shared\Infrastructure\Error\BusinessErrorRegistry'
 
     # =========================
     # 📊 HTTP Status Provider
