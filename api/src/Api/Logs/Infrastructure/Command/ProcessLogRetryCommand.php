@@ -17,6 +17,8 @@ use Symfony\Component\Mime\Email;
 #[AsCommand(name: 'app:process-log-retry')]
 class ProcessLogRetryCommand extends Command
 {
+    private const MAX_AGE_SECONDS = 86400; // 24h
+
     public function __construct(
         private FileLogQueueService $queue,
         private CreateLogHandler $handler,
@@ -29,58 +31,89 @@ class ProcessLogRetryCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $files = glob($this->queueDir() . '/*.processing') ?: [];
+        $start = microtime(true);
+
+        $this->log($output, ['START', 'process-log-retry']);
+
+        $files = glob($this->getQueueDir() . '/*.processing') ?: [];
 
         if (empty($files)) {
-            $output->writeln('<info>No processing files to retry</info>');
+            $this->log($output, ['INFO', 'No processing files']);
             return Command::SUCCESS;
         }
 
+        $this->log($output, ['INFO', 'Found', count($files), 'processing files']);
+
+        $totalFiles = 0;
+        $totalLogs = 0;
+        $totalErrors = 0;
+
         foreach ($files as $file) {
 
-            // ⏱️ filtre âge (> 1 heure ici)
-            if (time() - filemtime($file) < 3600) {
+            // ⏱️ filtre 24h
+            if (time() - filemtime($file) < self::MAX_AGE_SECONDS) {
                 continue;
             }
 
-            $output->writeln("Retry: $file");
+            $totalFiles++;
+            $hasError = false;
+
+            $this->log($output, ['RETRY', $file]);
 
             try {
-                $content = file_get_contents($file);
-                $batch = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
-
-                $i = 0;
+                $batch = $this->queue->read($file);
 
                 foreach ($batch as $item) {
-                    $dto = $this->hydrateDto($item);
-                    $this->handler->handle($dto);
 
-                    if (($i % 100) === 0) {
-                        $this->em->flush();
-                        $this->em->clear();
-                        $this->factory->reset();
+                    try {
+                        $dto = $this->hydrateDto($item);
+                        $this->handler->handle($dto);
+
+                        $totalLogs++;
+
+                    } catch (\Throwable $e) {
+                        $hasError = true;
+                        $totalErrors++;
+
+                        $this->log($output, ['ERROR_LOG', $file, $e->getMessage()]);
                     }
-
-                    $i++;
                 }
 
                 $this->em->flush();
 
-                // ✅ succès → suppression
-                unlink($file);
+                if ($hasError) {
+                    $errorFile = $this->queue->markAsError($file);
+
+                    $this->sendAlert($errorFile, 'Partial failure during retry');
+
+                    $this->log($output, ['ERROR_FILE', $errorFile]);
+                } else {
+                    $this->queue->delete($file);
+                    $this->log($output, ['OK', $file]);
+                }
 
             } catch (\Throwable $e) {
 
-                // ❌ échec → rename failed
-                $failedFile = str_replace('.processing', '.failed', $file);
-                rename($file, $failedFile);
+                $totalErrors++;
 
-                // 📧 mail
-                $this->sendAlert($failedFile, $e->getMessage());
+                $errorFile = $this->queue->markAsError($file);
 
-                $output->writeln("<error>Failed: $failedFile</error>");
+                $this->sendAlert($errorFile, $e->getMessage());
+
+                $this->log($output, ['ERROR_FATAL', $file, $e->getMessage()]);
+                $this->log($output, ['ERROR_FILE', $errorFile]);
             }
         }
+
+        $duration = round(microtime(true) - $start, 2);
+
+        $this->log($output, [
+            'DONE',
+            "files=$totalFiles",
+            "logs=$totalLogs",
+            "errors=$totalErrors",
+            "duration={$duration}s"
+        ]);
 
         return Command::SUCCESS;
     }
@@ -118,15 +151,24 @@ class ProcessLogRetryCommand extends Command
         $email = (new Email())
             ->from('noreply@yourdomain.com')
             ->to('admin@yourdomain.com')
-            ->subject('Log queue FAILED')
+            ->subject('Log queue ERROR')
             ->text("File: $file\nError: $error");
 
         $this->mailer->send($email);
     }
 
-    private function queueDir(): string
+    private function log(OutputInterface $output, array $fields): void
     {
-        // 👉 adapte si besoin (ou injecte param Symfony)
+        $line = array_merge(
+            [(new \DateTime())->format('Y-m-d H:i:s')],
+            $fields
+        );
+
+        $output->writeln(implode('|', $line));
+    }
+
+    private function getQueueDir(): string
+    {
         return __DIR__ . '/../../../../var/log_queue';
     }
 }
