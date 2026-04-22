@@ -4,6 +4,7 @@ namespace App\Api\Logs\Application\Processor;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
+use App\Api\Logs\Application\DTO\CreateLogEventCollectionDto;
 use App\Api\Logs\Application\DTO\CreateLogEventDto;
 use App\Api\Logs\Application\Service\FileLogQueueService;
 
@@ -16,19 +17,10 @@ class LogProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): mixed
     {
         // -------------------------
-        // NORMALISATION
-        // -------------------------
-        if (!is_array($data) || !isset($data[0])) {
-            $data = [$data];
-        }
-
-        // -------------------------
         // VALIDATION TYPE
         // -------------------------
-        foreach ($data as $item) {
-            if (!$item instanceof CreateLogEventDto) {
-                throw new \InvalidArgumentException('Invalid payload');
-            }
+        if (!$data instanceof CreateLogEventCollectionDto) {
+            throw new \InvalidArgumentException('Invalid payload');
         }
 
         // -------------------------
@@ -36,7 +28,7 @@ class LogProcessor implements ProcessorInterface
         // -------------------------
         $payload = array_map(
             fn (CreateLogEventDto $dto) => $dto->toArray(),
-            $data
+            $data->logs
         );
 
         // -------------------------
