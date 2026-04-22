@@ -26,61 +26,96 @@ class ProcessLogQueueCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $files = $this->queue->listFiles();
+        $start = microtime(true);
 
-        if (empty($files)) {
-            $output->writeln('<info>No files to process</info>');
+        $this->log($output, ['START', 'process-log-queue']);
+
+        $files = $this->queue->listFiles();
+        $totalFiles = count($files);
+
+        if ($totalFiles === 0) {
+            $this->log($output, ['INFO', 'No files']);
             return Command::SUCCESS;
         }
 
-        $output->writeln(sprintf('<info>%d file(s) to process</info>', count($files)));
+        $this->log($output, ['INFO', "Found $totalFiles files"]);
 
         $i = 0;
-        $processed = 0;
+        $totalLogs = 0;
+        $totalErrors = 0;
 
         foreach ($files as $file) {
 
+            $processingFile = $this->queue->acquire($file);
+
+            if (!$processingFile) {
+                continue;
+            }
+
+            $hasError = false;
+
             try {
-                $batch = $this->queue->readAndDelete($file);
+                $batch = $this->queue->read($processingFile);
+
+                $this->log($output, ['PROCESS', $file, count($batch)]);
 
                 foreach ($batch as $item) {
 
-                    // 🔁 reconstruction DTO
-                    $dto = $this->hydrateDto($item);
+                    try {
+                        $dto = $this->hydrateDto($item);
+                        $this->handler->handle($dto);
 
-                    // 🧠 traitement métier
-                    $this->handler->handle($dto);
+                        $totalLogs++;
+                        $i++;
 
-                    $processed++;
-                    $i++;
+                        // 🔥 batch flush
+                        if (($i % 100) === 0) {
+                            $this->em->flush();
+                            $this->em->clear();
+                            $this->factory->reset();
 
-                    // 🔥 batch flush
-                    if (($i % 100) === 0) {
-                        $this->em->flush();
-                        $this->em->clear();
-                        $this->factory->reset();
+                            $this->log($output, ['FLUSH', 100]);
+                        }
 
-                        $output->writeln("Flushed 100 logs...");
+                    } catch (\Throwable $e) {
+                        $hasError = true;
+                        $totalErrors++;
+
+                        $this->log($output, ['ERROR_LOG', $file, $e->getMessage()]);
                     }
                 }
 
+                // 🔥 flush final pour ce fichier
+                $this->em->flush();
+
+                if ($hasError) {
+                    $errorFile = $this->queue->markAsError($processingFile);
+                    $this->log($output, ['ERROR_FILE', $errorFile]);
+                } else {
+                    $this->queue->delete($processingFile);
+                    $this->log($output, ['OK', $file]);
+                }
+
             } catch (\Throwable $e) {
-                // ⚠️ on log et on continue
-                $output->writeln(sprintf(
-                    '<error>Error processing file %s : %s</error>',
-                    $file,
-                    $e->getMessage()
-                ));
+
+                $totalErrors++;
+
+                $errorFile = $this->queue->markAsError($processingFile);
+
+                $this->log($output, ['ERROR_FATAL', $file, $e->getMessage()]);
+                $this->log($output, ['ERROR_FILE', $errorFile]);
             }
         }
 
-        // 🔥 flush final
-        $this->em->flush();
+        $duration = round(microtime(true) - $start, 2);
 
-        $output->writeln(sprintf(
-            '<info>Done. %d logs processed.</info>',
-            $processed
-        ));
+        $this->log($output, [
+            'DONE',
+            "files=$totalFiles",
+            "logs=$totalLogs",
+            "errors=$totalErrors",
+            "duration={$duration}s"
+        ]);
 
         return Command::SUCCESS;
     }
@@ -114,5 +149,18 @@ class ProcessLogQueueCommand extends Command
         $dto->context = $data['context'] ?? null;
 
         return $dto;
+    }
+
+    /**
+     * 📊 Logger CSV (| séparateur)
+     */
+    private function log(OutputInterface $output, array $fields): void
+    {
+        $line = array_merge(
+            [(new \DateTime())->format('Y-m-d H:i:s')],
+            $fields
+        );
+
+        $output->writeln(implode('|', $line));
     }
 }

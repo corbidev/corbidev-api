@@ -1,4 +1,8 @@
 {
+"logs":
+[
+
+{
   "externalId": "uuid",
 
   "domain": "corbisier.fr",
@@ -24,7 +28,8 @@
     }
   }
 }
-
+]
+}
 
 crontab -e
 
