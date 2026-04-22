@@ -30,14 +30,6 @@ final class CreateLogHandler
 
         $this->em->persist($event);
 
-        // =========================
-        // 💾 Persistence
-        // =========================
-        try {
-            $this->em->flush();
-        } catch (\Throwable $e) {
-            // ⚠️ fallback uniquement (DB / infra)
-            throw DomainException::database('Unable to persist log');
-        }
+        // ❌ plus de flush ici
     }
 }

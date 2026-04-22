@@ -76,4 +76,28 @@ final class CreateLogEventDto
     public ?string $errorCode = null;
 
     public ?array $context = null;
+
+    /**
+     * 🔁 Transformation DTO → Array (pour file queue)
+     */
+    public function toArray(): array
+    {
+        return [
+            'externalId' => $this->externalId,
+            'message' => $this->message,
+            'level' => $this->level,
+            'env' => $this->env,
+            'domain' => $this->domain,
+            'uri' => $this->uri,
+            'method' => $this->method,
+            'ip' => $this->ip,
+            'client' => $this->client,
+            'version' => $this->version,
+            'fingerprint' => $this->fingerprint,
+            'userId' => $this->userId,
+            'httpStatus' => $this->httpStatus,
+            'errorCode' => $this->errorCode,
+            'context' => $this->context,
+        ];
+    }
 }

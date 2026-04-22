@@ -8,49 +8,64 @@ class FileLogQueueService
         private string $dir
     ) {}
 
-    public function push(array $logs): void
+    // =========================
+    // 📥 ENQUEUE (1 fichier = 1 batch)
+    // =========================
+    public function enqueue(array $logs): void
     {
-        $file = $this->getCurrentFile();
+        $file = $this->generateFilename();
 
-        $lines = '';
-
-        foreach ($logs as $log) {
-            $lines .= json_encode($log, JSON_UNESCAPED_UNICODE) . PHP_EOL;
-        }
-
-        file_put_contents($file, $lines, FILE_APPEND | LOCK_EX);
+        file_put_contents(
+            $file,
+            json_encode($logs, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)
+        );
     }
 
+    // =========================
+    // 📂 LIST FILES
+    // =========================
     public function listFiles(): array
     {
-        return glob($this->dir . '/logs_*.log') ?: [];
+        $files = glob($this->dir . '/queue_*.log') ?: [];
+
+        sort($files); // 🔥 ordre chronologique
+
+        return $files;
     }
 
-    public function consumeFile(string $file, callable $callback): void
+    // =========================
+    // ⚙️ READ + DELETE (SAFE)
+    // =========================
+    public function readAndDelete(string $file): array
     {
-        $handle = fopen($file, 'r');
+        // 🔒 rename pour éviter double traitement
+        $processingFile = $file . '.processing';
 
-        if (!$handle) {
-            return;
+        if (!rename($file, $processingFile)) {
+            return [];
         }
 
-        while (($line = fgets($handle)) !== false) {
-            $data = json_decode($line, true);
+        $content = file_get_contents($processingFile);
 
-            if ($data) {
-                $callback($data);
-            }
+        if ($content === false) {
+            unlink($processingFile);
+            return [];
         }
 
-        fclose($handle);
+        $data = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
 
-        unlink($file);
+        unlink($processingFile);
+
+        return $data;
     }
 
-    private function getCurrentFile(): string
+    // =========================
+    // 🏷️ NOM UNIQUE
+    // =========================
+    private function generateFilename(): string
     {
-        $date = date('Ymd_Hi');
+        $date = (new \DateTime())->format('Y-m-d-His-u');
 
-        return sprintf('%s/logs_%s.log', $this->dir, $date);
+        return sprintf('%s/queue_%s.log', $this->dir, $date);
     }
 }

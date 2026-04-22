@@ -4,50 +4,46 @@ namespace App\Api\Logs\Application\Processor;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
-use App\Api\Logs\Application\Handler\CreateLogHandler;
 use App\Api\Logs\Application\DTO\CreateLogEventDto;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Api\Logs\Application\Service\FileLogQueueService;
 
 class LogProcessor implements ProcessorInterface
 {
     public function __construct(
-        private CreateLogHandler $handler,
-        private EntityManagerInterface $em
+        private FileLogQueueService $queue
     ) {}
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): mixed
     {
         // -------------------------
-        // BULK (optionnel)
+        // NORMALISATION
         // -------------------------
-        if (is_array($data)) {
+        if (!is_array($data) || !isset($data[0])) {
+            $data = [$data];
+        }
 
-            foreach ($data as $item) {
-                if (!$item instanceof CreateLogEventDto) {
-                    throw new \InvalidArgumentException('Invalid payload in bulk');
-                }
-
-                $this->handler->handle($item);
+        // -------------------------
+        // VALIDATION TYPE
+        // -------------------------
+        foreach ($data as $item) {
+            if (!$item instanceof CreateLogEventDto) {
+                throw new \InvalidArgumentException('Invalid payload');
             }
-
-            // 🔥 flush unique (perf)
-            $this->em->flush();
-
-            return null; // 🔥 204
         }
 
         // -------------------------
-        // SINGLE
+        // TRANSFORMATION → ARRAY
         // -------------------------
-        if (!$data instanceof CreateLogEventDto) {
-            throw new \InvalidArgumentException('Invalid payload');
-        }
+        $payload = array_map(
+            fn (CreateLogEventDto $dto) => $dto->toArray(),
+            $data
+        );
 
-        $this->handler->handle($data);
+        // -------------------------
+        // QUEUE
+        // -------------------------
+        $this->queue->enqueue($payload);
 
-        // 🔥 obligatoire
-        $this->em->flush();
-
-        return null; // 🔥 204
+        return null; // 204
     }
 }
