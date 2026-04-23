@@ -11,6 +11,7 @@ use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 
@@ -24,7 +25,11 @@ class ProcessLogRetryCommand extends Command
         private CreateLogHandler $handler,
         private EntityManagerInterface $em,
         private LogEventFactory $factory,
-        private MailerInterface $mailer
+        private MailerInterface $mailer,
+        #[Autowire('%env(MAIL_FROM)%')]
+        private string $mailFrom,
+        #[Autowire('%env(MAIL_TO)%')]
+        private string $mailTo
     ) {
         parent::__construct();
     }
@@ -47,8 +52,13 @@ class ProcessLogRetryCommand extends Command
         $totalFiles = 0;
         $totalLogs = 0;
         $totalErrors = 0;
+        $i = 0;
 
         foreach ($files as $file) {
+
+            if (!is_file($file)) {
+                continue;
+            }
 
             // ⏱️ filtre 24h
             if (time() - filemtime($file) < self::MAX_AGE_SECONDS) {
@@ -70,6 +80,16 @@ class ProcessLogRetryCommand extends Command
                         $this->handler->handle($dto);
 
                         $totalLogs++;
+                        $i++;
+
+                        // 🔥 flush batch
+                        if (($i % 100) === 0) {
+                            $this->em->flush();
+                            $this->em->clear();
+                            $this->factory->reset();
+
+                            $this->log($output, ['FLUSH', 100]);
+                        }
 
                     } catch (\Throwable $e) {
                         $hasError = true;
@@ -149,8 +169,8 @@ class ProcessLogRetryCommand extends Command
     private function sendAlert(string $file, string $error): void
     {
         $email = (new Email())
-            ->from('noreply@yourdomain.com')
-            ->to('admin@yourdomain.com')
+            ->from($this->mailFrom)
+            ->to($this->mailTo)
             ->subject('Log queue ERROR')
             ->text("File: $file\nError: $error");
 
