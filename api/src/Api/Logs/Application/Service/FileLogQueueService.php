@@ -8,49 +8,125 @@ class FileLogQueueService
         private string $dir
     ) {}
 
-    public function push(array $logs): void
+    // =========================
+    // 📥 ENQUEUE (1 fichier = 1 batch)
+    // =========================
+    public function enqueue(array $logs): void
     {
-        $file = $this->getCurrentFile();
+        $this->ensureDirectoryExists();
 
-        $lines = '';
+        $file = $this->generateFilename();
 
-        foreach ($logs as $log) {
-            $lines .= json_encode($log, JSON_UNESCAPED_UNICODE) . PHP_EOL;
+        $json = json_encode($logs, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+
+        if (file_put_contents($file, $json) === false) {
+            throw new \RuntimeException("Unable to write queue file: $file");
         }
-
-        file_put_contents($file, $lines, FILE_APPEND | LOCK_EX);
     }
 
+    // =========================
+    // 📂 LIST FILES
+    // =========================
     public function listFiles(): array
     {
-        return glob($this->dir . '/logs_*.log') ?: [];
+        $this->ensureDirectoryExists();
+
+        $files = glob($this->dir . '/queue_*.log') ?: [];
+
+        sort($files); // ordre chronologique
+
+        return $files;
     }
 
-    public function consumeFile(string $file, callable $callback): void
+    // =========================
+    // 🔒 ACQUIRE FILE (.processing)
+    // =========================
+    public function acquire(string $file): ?string
     {
-        $handle = fopen($file, 'r');
-
-        if (!$handle) {
-            return;
+        if (!is_file($file)) {
+            return null;
         }
 
-        while (($line = fgets($handle)) !== false) {
-            $data = json_decode($line, true);
+        $processingFile = $file . '.processing';
 
-            if ($data) {
-                $callback($data);
+        if (!@rename($file, $processingFile)) {
+            return null; // déjà pris par un autre process
+        }
+
+        return $processingFile;
+    }
+
+    // =========================
+    // 📖 READ FILE
+    // =========================
+    public function read(string $processingFile): array
+    {
+        if (!is_file($processingFile)) {
+            throw new \RuntimeException("File not found: $processingFile");
+        }
+
+        $content = file_get_contents($processingFile);
+
+        if ($content === false) {
+            throw new \RuntimeException("Unable to read file: $processingFile");
+        }
+
+        try {
+            return json_decode($content, true, 512, JSON_THROW_ON_ERROR);
+        } catch (\Throwable $e) {
+            throw new \RuntimeException("Invalid JSON in file: $processingFile");
+        }
+    }
+
+    // =========================
+    // ✅ DELETE (SUCCESS)
+    // =========================
+    public function delete(string $processingFile): void
+    {
+        if (is_file($processingFile)) {
+            @unlink($processingFile);
+        }
+    }
+
+    // =========================
+    // ❌ MARK AS ERROR
+    // =========================
+    public function markAsError(string $processingFile): string
+    {
+        if (!is_file($processingFile)) {
+            return $processingFile;
+        }
+
+        $errorFile = preg_replace('/\.processing$/', '.error', $processingFile);
+
+        if (!$errorFile) {
+            $errorFile = $processingFile . '.error';
+        }
+
+        @rename($processingFile, $errorFile);
+
+        return $errorFile;
+    }
+
+    // =========================
+    // 🏷️ NOM UNIQUE
+    // =========================
+    private function generateFilename(): string
+    {
+        $date = (new \DateTime())->format('Y-m-d-His-u');
+
+        return sprintf('%s/queue_%s.log', rtrim($this->dir, '/'), $date);
+    }
+
+    // =========================
+    // 📁 ENSURE DIRECTORY
+    // =========================
+    private function ensureDirectoryExists(): void
+    {
+        if (!is_dir($this->dir)) {
+            if (!@mkdir($this->dir, 0775, true) && !is_dir($this->dir)) {
+                throw new \RuntimeException("Unable to create directory: {$this->dir}");
             }
         }
-
-        fclose($handle);
-
-        unlink($file);
-    }
-
-    private function getCurrentFile(): string
-    {
-        $date = date('Ymd_Hi');
-
-        return sprintf('%s/logs_%s.log', $this->dir, $date);
     }
 }
