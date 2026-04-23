@@ -1,16 +1,13 @@
 monolog:
-    channels: ['business']
-    handlers:
-        main:
-            type: stream
-            path: "%kernel.logs_dir%/app.log"
-            level: debug
-            formatter: monolog.formatter.json
+    channels: ['business', 'technical', 'fallback']
 
-        error:
+    handlers:
+
+        technical:
             type: stream
-            path: "%kernel.logs_dir%/error.log"
-            level: error
+            path: "%kernel.logs_dir%/technical.log"
+            level: debug
+            channels: ["technical"]
             formatter: monolog.formatter.json
 
         business:
@@ -19,6 +16,30 @@ monolog:
             level: info
             channels: ["business"]
             formatter: monolog.formatter.json
+
+        error:
+            type: stream
+            path: "%kernel.logs_dir%/error.log"
+            level: error
+            formatter: monolog.formatter.json
+
+        api_logs_technical:
+            type: service
+            id: App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler.technical
+            level: error
+            channels: ["technical"]
+
+        api_logs_business:
+            type: service
+            id: App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler.business
+            level: info
+            channels: ["business"]
+
+        fallback:
+            type: stream
+            path: "%kernel.logs_dir%/api_fallback.log"
+            level: error
+            channels: ["fallback"]
 
         console:
             type: console

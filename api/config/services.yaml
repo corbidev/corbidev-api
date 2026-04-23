@@ -1,5 +1,3 @@
-# config/services.yaml
-
 imports:
     - { resource: errors/business_errors.yaml }
 
@@ -14,9 +12,6 @@ services:
         autowire: true
         autoconfigure: true
 
-    # =========================
-    # 🔥 Auto-loading global
-    # =========================
     App\:
         resource: '../src/'
         exclude:
@@ -55,7 +50,7 @@ services:
             $cache: '@tenant.cache'
 
     # =========================
-    # 🔥 API Exception Listener (CENTRAL)
+    # 🔥 API Exception Listener
     # =========================
     App\Shared\Infrastructure\Exception\ApiExceptionListener:
         arguments:
@@ -72,7 +67,7 @@ services:
             $business_errors: '%business_errors%'
 
     # =========================
-    # 🔥 Swagger OpenAPI Decorator
+    # 🔥 Swagger
     # =========================
     App\Shared\Infrastructure\Swagger\OpenApiFactoryDecorator:
         decorates: 'api_platform.openapi.factory'
@@ -86,3 +81,40 @@ services:
     App\Http\HttpStatusProvider:
         arguments:
             $filePath: '%kernel.project_dir%/config/http_statuses.fr.json'
+
+    # =====================================================
+    # 🧠 LOGGING
+    # =====================================================
+
+    App\Shared\Logging\Infrastructure\Context\LogContextProvider: ~
+
+    App\Shared\Logging\Infrastructure\Monolog\LogContextProcessor:
+        tags:
+            - { name: monolog.processor }
+
+    # 🔥 HANDLER TECHNIQUE
+    App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler.technical:
+        class: App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler
+        arguments:
+            $endpoint: '%env(API_LOGS_ENDPOINT)%'
+            $appVersion: '%env(APP_VERSION)%'
+            $client: 'web-technical'
+            $fallbackLogger: '@monolog.logger.fallback'
+
+    # 🔥 HANDLER BUSINESS
+    App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler.business:
+        class: App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler
+        arguments:
+            $endpoint: '%env(API_LOGS_ENDPOINT)%'
+            $appVersion: '%env(APP_VERSION)%'
+            $client: 'web-business'
+            $fallbackLogger: '@monolog.logger.fallback'
+
+    # 🔥 SUBSCRIBER
+    App\Shared\Logging\Infrastructure\EventSubscriber\LogFlushSubscriber:
+        arguments:
+            $technicalHandler: '@App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler.technical'
+            $businessHandler: '@App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler.business'
+            $fallbackLogger: '@monolog.logger.fallback'
+        tags:
+            - { name: kernel.event_subscriber }
