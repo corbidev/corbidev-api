@@ -15,9 +15,34 @@ final class LogValidator
         private readonly LogRepositoryInterface $repository
     ) {}
 
+    // =========================
+    // 🔁 IDempotence (NO THROW)
+    // =========================
+
+    /**
+     * Vérifie si un externalId existe déjà
+     * 👉 utilisé pour ignorer silencieusement les duplicates
+     */
+    public function existsExternalId(string $externalId): bool
+    {
+        if ($externalId === '') {
+            return false;
+        }
+
+        return $this->repository->existsByExternalId($externalId);
+    }
+
+    // =========================
+    // ❌ VALIDATION STRICTE (optionnel)
+    // =========================
+
+    /**
+     * Validation stricte (utile API synchrone)
+     * 👉 ici on THROW (différent du pipeline async)
+     */
     public function validateUniqueExternalId(string $externalId): void
     {
-        if ($this->repository->existsByExternalId($externalId)) {
+        if ($this->existsExternalId($externalId)) {
             throw new DomainException(
                 errorCode: ErrorCode::RESOURCE_ALREADY_EXISTS,
                 message: 'Log already exists',

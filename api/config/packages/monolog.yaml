@@ -1,25 +1,65 @@
 monolog:
-    channels: ['business']
+    channels: ['business', 'technical', 'fallback']
+
     handlers:
-        main:
+
+        # =========================
+        # 🔧 TECHNICAL LOGS
+        # =========================
+        technical:
             type: stream
-            path: "%kernel.logs_dir%/app.log"
+            path: "%kernel.logs_dir%/technical.log"
             level: debug
-            formatter: monolog.formatter.json
+            channels: ["technical"]
+            formatter: App\Shared\Logging\Infrastructure\Monolog\UtcJsonFormatter
 
-        error:
-            type: stream
-            path: "%kernel.logs_dir%/error.log"
-            level: error
-            formatter: monolog.formatter.json
-
+        # =========================
+        # 💼 BUSINESS LOGS
+        # =========================
         business:
             type: stream
             path: "%kernel.logs_dir%/business.log"
             level: info
             channels: ["business"]
-            formatter: monolog.formatter.json
+            formatter: App\Shared\Logging\Infrastructure\Monolog\UtcJsonFormatter
 
+        # =========================
+        # ❌ ERROR GLOBAL
+        # =========================
+        error:
+            type: stream
+            path: "%kernel.logs_dir%/error.log"
+            level: error
+            formatter: App\Shared\Logging\Infrastructure\Monolog\UtcJsonFormatter
+
+        # =========================
+        # 🚀 API LOGS → QUEUE
+        # =========================
+        api_logs_technical:
+            type: service
+            id: App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler.technical
+            level: error
+            channels: ["technical"]
+
+        api_logs_business:
+            type: service
+            id: App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler.business
+            level: info
+            channels: ["business"]
+
+        # =========================
+        # 🛟 FALLBACK
+        # =========================
+        fallback:
+            type: stream
+            path: "%kernel.logs_dir%/api_fallback.log"
+            level: error
+            channels: ["fallback"]
+            formatter: App\Shared\Logging\Infrastructure\Monolog\UtcJsonFormatter
+
+        # =========================
+        # 🖥️ CONSOLE
+        # =========================
         console:
             type: console
             process_psr_3_messages: false

@@ -15,38 +15,53 @@ use App\Api\Logs\Domain\Entity\LogErrorCode;
 #[ORM\Index(columns: ['ts'], name: 'idx_log_ts')]
 #[ORM\Index(columns: ['fingerprint'], name: 'idx_log_fingerprint')]
 #[ORM\Index(columns: ['domain', 'levelName'], name: 'idx_domain_level')]
+#[ORM\Index(columns: ['requestId'], name: 'idx_request_id')] // 🔥 important
 class LogEvent
 {
     public function __construct()
     {
-        $this->ts = new \DateTimeImmutable();
+        $now = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+
+        $this->ts = $now;
+        $this->createdAt = $now;
+        $this->eventAt = null;
     }
 
-    // -------------------------
+    // =========================
     // IDENTIFIANT
-    // -------------------------
+    // =========================
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column(type: 'bigint')]
     private ?int $id = null;
 
-    /**
-     * UUID fourni par le client (idempotence)
-     */
     #[ORM\Column(length: 36, unique: true)]
     private string $externalId;
 
-    // -------------------------
+    // =========================
+    // 🔗 REQUEST ID (NOUVEAU)
+    // =========================
+
+    #[ORM\Column(length: 64, nullable: true)]
+    private ?string $requestId = null;
+
+    // =========================
     // TEMPS
-    // -------------------------
+    // =========================
 
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $ts;
 
-    // -------------------------
-    // RELATIONS (lookup tables)
-    // -------------------------
+    #[ORM\Column(type: 'datetime_immutable')]
+    private \DateTimeImmutable $createdAt;
+
+    #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $eventAt = null;
+
+    // =========================
+    // RELATIONS
+    // =========================
 
     #[ORM\ManyToOne(targetEntity: LogLevel::class)]
     #[ORM\JoinColumn(nullable: false)]
@@ -60,9 +75,9 @@ class LogEvent
     #[ORM\JoinColumn(nullable: true)]
     private ?LogErrorCode $errorCodeEntity = null;
 
-    // -------------------------
-    // DONNÉES DUPLIQUÉES (PERF)
-    // -------------------------
+    // =========================
+    // DONNÉES DUPLIQUÉES
+    // =========================
 
     #[ORM\Column(length: 50)]
     private string $levelName = '';
@@ -91,9 +106,9 @@ class LogEvent
     #[ORM\Column(type: 'json', nullable: true)]
     private ?array $context = null;
 
-    // -------------------------
+    // =========================
     // DONNÉES PRINCIPALES
-    // -------------------------
+    // =========================
 
     #[ORM\Column(length: 1024)]
     private string $message;
@@ -107,13 +122,18 @@ class LogEvent
     #[ORM\Column(length: 64)]
     private string $fingerprint;
 
-    // -------------------------
+    // =========================
     // GETTERS
-    // -------------------------
+    // =========================
 
     public function getId(): ?int { return $this->id; }
     public function getExternalId(): string { return $this->externalId; }
+    public function getRequestId(): ?string { return $this->requestId; }
+
     public function getTs(): \DateTimeImmutable { return $this->ts; }
+    public function getCreatedAt(): \DateTimeImmutable { return $this->createdAt; }
+    public function getEventAt(): ?\DateTimeImmutable { return $this->eventAt; }
+
     public function getLevel(): LogLevel { return $this->level; }
     public function getEnv(): LogEnv { return $this->env; }
     public function getErrorCodeEntity(): ?LogErrorCode { return $this->errorCodeEntity; }
@@ -130,9 +150,9 @@ class LogEvent
     public function getHttpStatus(): ?int { return $this->httpStatus; }
     public function getFingerprint(): string { return $this->fingerprint; }
 
-    // -------------------------
+    // =========================
     // SETTERS
-    // -------------------------
+    // =========================
 
     public function setExternalId(string $externalId): self
     {
@@ -143,7 +163,30 @@ class LogEvent
         }
 
         $this->externalId = $externalId;
+        return $this;
+    }
 
+    public function setRequestId(?string $requestId): self
+    {
+        $this->requestId = $requestId ? substr(trim($requestId), 0, 64) : null;
+        return $this;
+    }
+
+    public function setTs(\DateTimeImmutable $ts): self
+    {
+        $this->ts = $ts->setTimezone(new \DateTimeZone('UTC'));
+        return $this;
+    }
+
+    public function setCreatedAt(\DateTimeImmutable $createdAt): self
+    {
+        $this->createdAt = $createdAt->setTimezone(new \DateTimeZone('UTC'));
+        return $this;
+    }
+
+    public function setEventAt(?\DateTimeImmutable $eventAt): self
+    {
+        $this->eventAt = $eventAt?->setTimezone(new \DateTimeZone('UTC'));
         return $this;
     }
 
@@ -151,7 +194,6 @@ class LogEvent
     {
         $this->level = $level;
         $this->levelName = $level->getName();
-
         return $this;
     }
 
@@ -159,7 +201,6 @@ class LogEvent
     {
         $this->env = $env;
         $this->envName = $env->getName();
-
         return $this;
     }
 
@@ -167,7 +208,6 @@ class LogEvent
     {
         $this->errorCodeEntity = $errorCode;
         $this->errorCode = $errorCode?->getCode();
-
         return $this;
     }
 
@@ -243,9 +283,9 @@ class LogEvent
         return $this;
     }
 
-    // -------------------------
+    // =========================
     // MÉTIER
-    // -------------------------
+    // =========================
 
     public function isError(): bool
     {
@@ -255,10 +295,6 @@ class LogEvent
             true
         );
     }
-
-    // -------------------------
-    // UTILS
-    // -------------------------
 
     public function __toString(): string
     {

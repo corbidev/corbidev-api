@@ -7,11 +7,16 @@ use App\Api\Logs\Domain\Entity\LogLevel;
 use App\Api\Logs\Domain\Entity\LogEnv;
 use App\Api\Logs\Domain\Entity\LogErrorCode;
 
+use App\Api\Logs\Domain\Enum\LogLevelEnum;
+
 use App\Api\Logs\Application\DTO\CreateLogEventDto;
 
 use App\Api\Logs\Infrastructure\Repository\LogLevelRepository;
 use App\Api\Logs\Infrastructure\Repository\LogEnvRepository;
 use App\Api\Logs\Infrastructure\Repository\LogErrorCodeRepository;
+
+use App\Shared\Infrastructure\Util\DateTimeNormalizer;
+use App\Shared\Logging\Infrastructure\Context\RequestIdProvider;
 
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -22,35 +27,44 @@ class LogEventFactory
         private LogLevelRepository $levelRepo,
         private LogEnvRepository $envRepo,
         private LogErrorCodeRepository $errorCodeRepo,
+        private RequestIdProvider $requestIdProvider // 🔥 NEW
     ) {}
 
     private array $levelCache = [];
     private array $envCache = [];
     private array $errorCodeCache = [];
 
-    public function createFromDto(CreateLogEventDto $dto): LogEvent
+    public function createFromDto(CreateLogEventDto $dto, ?string $sourceFile = null): LogEvent
     {
         $event = new LogEvent();
 
-        // -------------------------
+        // =========================
+        // 🔗 REQUEST ID (🔥 CRITIQUE)
+        // =========================
+        $event->setRequestId(
+            $dto->requestId ?: $this->requestIdProvider->get()
+        );
+
+        // =========================
         // UUID CLIENT
-        // -------------------------
+        // =========================
         $event->setExternalId($dto->externalId);
 
-        // -------------------------
+        // =========================
         // LEVEL
-        // -------------------------
-        $levelKey = strtoupper($dto->level);
+        // =========================
+        $levelEnum = LogLevelEnum::tryFrom(strtoupper($dto->level)) ?? LogLevelEnum::INFO;
+        $levelKey = $levelEnum->value;
 
         $level = $this->levelCache[$levelKey]
             ??= $this->levelRepo->findOneByName($levelKey)
-                ?? $this->createLevel($levelKey);
+                ?? $this->createLevel($levelEnum);
 
         $event->setLevel($level);
 
-        // -------------------------
+        // =========================
         // ENV
-        // -------------------------
+        // =========================
         $envKey = strtolower($dto->env);
 
         $env = $this->envCache[$envKey]
@@ -59,9 +73,9 @@ class LogEventFactory
 
         $event->setEnv($env);
 
-        // -------------------------
+        // =========================
         // ERROR CODE
-        // -------------------------
+        // =========================
         if (!empty($dto->errorCode)) {
             $codeKey = strtoupper($dto->errorCode);
 
@@ -72,9 +86,9 @@ class LogEventFactory
             $event->setErrorCodeEntity($errorCode);
         }
 
-        // -------------------------
+        // =========================
         // DATA
-        // -------------------------
+        // =========================
 
         $event->setDomain($dto->domain);
         $event->setUri($dto->uri);
@@ -92,23 +106,31 @@ class LogEventFactory
             $event->setContext($dto->context);
         }
 
+        // =========================
+        // 🕒 TIMESTAMP LOGIC
+        // =========================
+
+        $now = DateTimeNormalizer::now();
+        $event->setCreatedAt($now);
+
+        $eventAt = DateTimeNormalizer::resolve(
+            $dto->timestamp ?? null,
+            $sourceFile
+        );
+
+        $event->setEventAt($eventAt);
+        $event->setTs($eventAt);
+
         return $event;
     }
 
-    private function createLevel(string $name): LogLevel
+    private function createLevel(LogLevelEnum $enum): LogLevel
     {
-        $map = [
-            'DEBUG' => 100,
-            'INFO' => 200,
-            'NOTICE' => 250,
-            'WARNING' => 300,
-            'ERROR' => 400,
-            'CRITICAL' => 500,
-            'ALERT' => 550,
-            'EMERGENCY' => 600,
-        ];
+        $level = new LogLevel(
+            $enum->value,
+            $enum->severity()
+        );
 
-        $level = new LogLevel($name, $map[$name] ?? 200);
         $this->em->persist($level);
 
         return $level;

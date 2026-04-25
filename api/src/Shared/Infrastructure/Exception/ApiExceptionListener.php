@@ -23,16 +23,26 @@ final class ApiExceptionListener
         // 🔥 Mapper = source unique (error + status)
         [$apiError, $status] = $this->mapper->mapWithStatus($exception);
 
-        // 🔥 Logging structuré
+        $request = $event->getRequest();
+
+        // 🔥 IMPORTANT : injecter le httpStatus pour les logs
+        $request->attributes->set('http_status', $status);
+
+        // 🔥 Contexte structuré (propre et exploitable)
         $context = [
-            'status' => $status,
-            'error_code' => $apiError->getCode()->value,
-            'business_code' => $apiError->getBusinessCode()?->value,
+            'httpStatus' => $status,
+            'errorCode' => $apiError->getCode()->value,
+            'businessCode' => $apiError->getBusinessCode()?->value,
+            'exceptionClass' => $exception::class,
             'message' => $exception->getMessage(),
-            'exception_class' => $exception::class,
-            'trace' => $status >= 500 ? $exception->getTraceAsString() : null,
         ];
 
+        // 🔥 Stack trace uniquement pour erreurs serveur
+        if ($status >= 500) {
+            $context['trace'] = $exception->getTraceAsString();
+        }
+
+        // 🔥 Logging (sera enrichi automatiquement par ton processor)
         if ($status >= 500) {
             $this->logger->error('API Exception', $context);
         } else {
