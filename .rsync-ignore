@@ -3,11 +3,14 @@
 .rsync-ignore
 .gitignore
 .vscode
+
+# Env
 !.env.*.example
 .env
 .env.*
+!.env.*.example
 .env.docker-compose.example
- 
+
 docker-compose.*
 
 database
