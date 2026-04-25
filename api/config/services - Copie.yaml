@@ -93,6 +93,9 @@ services:
         tags:
             - { name: monolog.processor }
 
+    # =========================
+    # 🕒 UTC FORMATTER
+    # =========================
     App\Shared\Logging\Infrastructure\Monolog\UtcJsonFormatter: ~
 
     # =========================
@@ -127,43 +130,3 @@ services:
             $fallbackLogger: '@monolog.logger.fallback'
         tags:
             - { name: kernel.event_subscriber }
-
-    # =====================================================
-    # 🔐 JWT / HMAC SECURITY
-    # =====================================================
-
-    # 🔒 SecretCrypto
-    App\Api\Jwt\Security\SecretCrypto:
-        arguments:
-            $appSecret: '%kernel.secret%'
-
-    # 🌐 Subscriber HTTP
-    App\Api\Jwt\Http\HmacRequestSubscriber:
-        tags:
-            - { name: kernel.event_subscriber }
-
-    # 🧠 Validator
-    App\Api\Jwt\Security\HmacValidator: ~
-
-    # 🧠 Canonical builder
-    App\Api\Jwt\Security\CanonicalRequestBuilder: ~
-
-    # 🚨 Attack detector (alerting)
-    App\Api\Jwt\Security\HmacAttackDetector:
-        arguments:
-            $cache: '@tenant.cache'
-            $logger: '@monolog.logger.technical'
-
-    # 🧠 Handlers
-
-    # 🔥 HMAC principal (business logs + alerting)
-    App\Api\Jwt\Handler\ValidateHmacHandler:
-        arguments:
-            $logger: '@monolog.logger.business'
-
-    App\Api\Jwt\Handler\CreateClientHandler: ~
-
-    App\Api\Jwt\Handler\RotateSecretHandler: ~
-
-    # 🏭 Factory
-    App\Api\Jwt\Factory\ApiClientFactory: ~

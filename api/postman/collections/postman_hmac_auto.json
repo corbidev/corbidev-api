@@ -1,0 +1,119 @@
+{
+  "info": {
+    "name": "JWT HMAC API (Auto Sign)",
+    "_postman_id": "hmac-collection-advanced-001",
+    "description": "Collection Postman avec signature HMAC automatique",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const clientId = pm.environment.get('client_id');",
+          "const secret = pm.environment.get('secret');",
+          "",
+          "const method = pm.request.method.toUpperCase();",
+          "const path = '/' + pm.request.url.path.join('/');",
+          "",
+          "let body = '';",
+          "if (pm.request.body && pm.request.body.raw) {",
+          "    body = pm.request.body.raw;",
+          "}",
+          "",
+          "const bodyHash = CryptoJS.SHA256(body).toString(CryptoJS.enc.Hex);",
+          "",
+          "const timestamp = Math.floor(Date.now() / 1000).toString();",
+          "const nonce = CryptoJS.lib.WordArray.random(16).toString();",
+          "",
+          "const stringToSign = [method, path, bodyHash, timestamp, nonce].join('\\n');",
+          "",
+          "const signature = CryptoJS.HmacSHA256(stringToSign, secret).toString(CryptoJS.enc.Hex);",
+          "",
+          "pm.environment.set('timestamp', timestamp);",
+          "pm.environment.set('nonce', nonce);",
+          "pm.environment.set('signature', signature);",
+          "",
+          "pm.request.headers.upsert({ key: 'X-CLIENT-ID', value: clientId });",
+          "pm.request.headers.upsert({ key: 'X-TIMESTAMP', value: timestamp });",
+          "pm.request.headers.upsert({ key: 'X-NONCE', value: nonce });",
+          "pm.request.headers.upsert({ key: 'X-SIGNATURE', value: signature });"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Create Client",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Mon service\",\n  \"description\": \"Test HMAC\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/api/jwt/clients",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "jwt",
+            "clients"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Signed Test Request",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/jwt/test",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "jwt",
+            "test"
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://api.corbisier.fr"
+    },
+    {
+      "key": "client_id",
+      "value": "cli_xxxxx"
+    },
+    {
+      "key": "secret",
+      "value": "secret_xxxxx"
+    },
+    {
+      "key": "timestamp",
+      "value": ""
+    },
+    {
+      "key": "nonce",
+      "value": ""
+    },
+    {
+      "key": "signature",
+      "value": ""
+    }
+  ]
+}

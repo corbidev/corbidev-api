@@ -32,3 +32,8 @@ doctrine:
             is_bundle: false
             dir: '%kernel.project_dir%/src/Api/Logs/Domain/Entity'
             prefix: 'App\Api\Logs\Domain\Entity'
+
+          Jwt:
+            is_bundle: false
+            dir: '%kernel.project_dir%/src/Api/Jwt/Entity'
+            prefix: 'App\Api\Jwt\Entity'

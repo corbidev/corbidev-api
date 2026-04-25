@@ -14,7 +14,7 @@ monolog:
             formatter: App\Shared\Logging\Infrastructure\Monolog\UtcJsonFormatter
 
         # =========================
-        # 💼 BUSINESS LOGS
+        # 💼 BUSINESS LOGS (inclut HMAC)
         # =========================
         business:
             type: stream
@@ -24,12 +24,14 @@ monolog:
             formatter: App\Shared\Logging\Infrastructure\Monolog\UtcJsonFormatter
 
         # =========================
-        # ❌ ERROR GLOBAL
+        # ❌ ERROR GLOBAL (tous canaux)
         # =========================
         error:
             type: stream
             path: "%kernel.logs_dir%/error.log"
             level: error
+            # ⚠️ IMPORTANT : capte tous les channels
+            channels: ["!event"]
             formatter: App\Shared\Logging\Infrastructure\Monolog\UtcJsonFormatter
 
         # =========================

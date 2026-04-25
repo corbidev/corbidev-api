@@ -1,0 +1,44 @@
+src/
+└── Api/
+    └── Jwt/
+        ├── Dto/
+ ☑️ CreateClientInput.php
+        │   ├── RotateSecretInput.php
+        │
+        ├── Resource/
+        │   └── ApiClientResource.php
+        │
+        ├── Processor/
+        │   ├── CreateClientProcessor.php
+        │   ├── RotateSecretProcessor.php
+        │
+        ├── Entity/
+        │   ├── ApiClient.php
+        │   ├── ApiClientSecret.php
+        │   ├── ApiNonce.php
+        │   ├── ApiLog.php
+        │
+        ├── Repository/
+        │   ├── ApiClientRepository.php
+        │   ├── ApiClientSecretRepository.php
+        │   ├── ApiNonceRepository.php
+        │   ├── ApiLogRepository.php
+        │
+        ├── Handler/
+        │   ├── CreateClientHandler.php
+        │   ├── RotateSecretHandler.php
+        │   ├── ValidateHmacHandler.php
+        │
+        ├── Security/
+        │   ├── HmacValidator.php
+        │   ├── CanonicalRequestBuilder.php
+        │   ├── SecretCrypto.php
+        │
+        ├── Http/
+        │   └── HmacRequestSubscriber.php
+        │
+        ├── Enum/
+        │   └── ApiLogType.php
+        │
+        └── Factory/
+            └── ApiClientFactory.php
