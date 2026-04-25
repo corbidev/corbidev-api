@@ -19,8 +19,8 @@ final class CreateLogEventDto
 
     #[Assert\NotBlank(message: 'level is required')]
     #[Assert\Choice(
-        choices: ['INFO','WARNING','ERROR','CRITICAL','ALERT','EMERGENCY'],
-        message: 'level must be one of: INFO, WARNING, ERROR, CRITICAL, ALERT, EMERGENCY'
+        choices: ['DEBUG','INFO','NOTICE','WARNING','ERROR','CRITICAL','ALERT','EMERGENCY'],
+        message: 'level must be a valid log level'
     )]
     public string $level;
 
@@ -64,6 +64,23 @@ final class CreateLogEventDto
 
     public ?array $context = null;
 
+    // =========================
+    // 🕒 TIMESTAMP CLIENT
+    // =========================
+
+    #[Assert\DateTime(message: 'timestamp must be a valid datetime')]
+    public ?string $timestamp = null;
+
+    // =========================
+    // 🔗 REQUEST ID (🔥 NEW)
+    // =========================
+
+    #[Assert\Length(
+        max: 64,
+        maxMessage: 'request_id must not exceed 64 characters'
+    )]
+    public ?string $requestId = null;
+
     /**
      * 🔁 Transformation DTO → Array (pour file queue)
      */
@@ -85,6 +102,10 @@ final class CreateLogEventDto
             'httpStatus' => $this->httpStatus,
             'errorCode' => $this->errorCode,
             'context' => $this->context,
+            'timestamp' => $this->timestamp,
+
+            // 🔥 propagation
+            'requestId' => $this->requestId,
         ];
     }
 }

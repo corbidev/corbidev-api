@@ -12,6 +12,9 @@ services:
         autowire: true
         autoconfigure: true
 
+    # =========================
+    # 🔥 AUTOLOAD
+    # =========================
     App\:
         resource: '../src/'
         exclude:
@@ -19,15 +22,13 @@ services:
             - '../src/Kernel.php'
 
     # =========================
-    # 🧠 Domain (Logs)
+    # 🧠 DOMAIN (LOGS)
     # =========================
-    App\Api\Logs\Domain\Service\LogValidator: ~
-
     App\Api\Logs\Domain\Repository\LogRepositoryInterface:
         alias: App\Api\Logs\Infrastructure\Repository\DoctrineLogRepository
 
     # =========================
-    # 🧠 Cache Tenant
+    # 🧠 CACHE TENANT
     # =========================
     tenant.cache:
         class: Symfony\Component\Cache\Adapter\FilesystemAdapter
@@ -36,21 +37,21 @@ services:
             $defaultLifetime: 3600
 
     # =========================
-    # 📁 File Queue Logs
+    # 📁 FILE QUEUE LOGS
     # =========================
     App\Api\Logs\Application\Service\FileLogQueueService:
         arguments:
             $dir: '%kernel.project_dir%/var/log_queue'
 
     # =========================
-    # 🧠 Tenant Provider
+    # 🧠 TENANT PROVIDER
     # =========================
     App\Api\Logs\Context\TenantProvider:
         arguments:
             $cache: '@tenant.cache'
 
     # =========================
-    # 🔥 API Exception Listener
+    # 🔥 API EXCEPTION LISTENER
     # =========================
     App\Shared\Infrastructure\Exception\ApiExceptionListener:
         arguments:
@@ -60,14 +61,14 @@ services:
             - { name: kernel.event_listener, event: kernel.exception, priority: 100 }
 
     # =========================
-    # 📦 Business Error Registry
+    # 📦 BUSINESS ERROR REGISTRY
     # =========================
     App\Shared\Infrastructure\Error\BusinessErrorRegistry:
         arguments:
             $business_errors: '%business_errors%'
 
     # =========================
-    # 🔥 Swagger
+    # 🔥 SWAGGER
     # =========================
     App\Shared\Infrastructure\Swagger\OpenApiFactoryDecorator:
         decorates: 'api_platform.openapi.factory'
@@ -76,14 +77,14 @@ services:
             - '@App\Shared\Infrastructure\Error\BusinessErrorRegistry'
 
     # =========================
-    # 📊 HTTP Status Provider
+    # 📊 HTTP STATUS PROVIDER
     # =========================
     App\Http\HttpStatusProvider:
         arguments:
             $filePath: '%kernel.project_dir%/config/http_statuses.fr.json'
 
     # =====================================================
-    # 🧠 LOGGING
+    # 🧠 LOGGING CORE
     # =====================================================
 
     App\Shared\Logging\Infrastructure\Context\LogContextProvider: ~
@@ -92,7 +93,14 @@ services:
         tags:
             - { name: monolog.processor }
 
-    # 🔥 HANDLER TECHNIQUE
+    # =========================
+    # 🕒 UTC FORMATTER
+    # =========================
+    App\Shared\Logging\Infrastructure\Monolog\UtcJsonFormatter: ~
+
+    # =========================
+    # 🔥 API HANDLER TECHNICAL
+    # =========================
     App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler.technical:
         class: App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler
         arguments:
@@ -101,7 +109,9 @@ services:
             $client: 'web-technical'
             $fallbackLogger: '@monolog.logger.fallback'
 
-    # 🔥 HANDLER BUSINESS
+    # =========================
+    # 🔥 API HANDLER BUSINESS
+    # =========================
     App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler.business:
         class: App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler
         arguments:
@@ -110,7 +120,9 @@ services:
             $client: 'web-business'
             $fallbackLogger: '@monolog.logger.fallback'
 
-    # 🔥 SUBSCRIBER
+    # =========================
+    # 🔄 FLUSH SUBSCRIBER
+    # =========================
     App\Shared\Logging\Infrastructure\EventSubscriber\LogFlushSubscriber:
         arguments:
             $technicalHandler: '@App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler.technical'
