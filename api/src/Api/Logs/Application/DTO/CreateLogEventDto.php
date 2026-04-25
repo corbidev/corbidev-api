@@ -3,20 +3,7 @@
 namespace App\Api\Logs\Application\DTO;
 
 use Symfony\Component\Validator\Constraints as Assert;
-use ApiPlatform\Metadata\ApiResource;
-use ApiPlatform\Metadata\Post;
-use App\Api\Logs\Application\Processor\LogProcessor;
 
-#[ApiResource(
-    operations: [
-        new Post(
-            uriTemplate: '/logs',
-            host: '%api_host%',
-            processor: LogProcessor::class,
-            output: false
-        )
-    ]
-)]
 final class CreateLogEventDto
 {
     #[Assert\NotBlank(message: 'externalId is required')]
@@ -32,8 +19,8 @@ final class CreateLogEventDto
 
     #[Assert\NotBlank(message: 'level is required')]
     #[Assert\Choice(
-        choices: ['INFO','WARNING','ERROR','CRITICAL','ALERT','EMERGENCY'],
-        message: 'level must be one of: INFO, WARNING, ERROR, CRITICAL, ALERT, EMERGENCY'
+        choices: ['DEBUG','INFO','NOTICE','WARNING','ERROR','CRITICAL','ALERT','EMERGENCY'],
+        message: 'level must be a valid log level'
     )]
     public string $level;
 
@@ -76,4 +63,49 @@ final class CreateLogEventDto
     public ?string $errorCode = null;
 
     public ?array $context = null;
+
+    // =========================
+    // 🕒 TIMESTAMP CLIENT
+    // =========================
+
+    #[Assert\DateTime(message: 'timestamp must be a valid datetime')]
+    public ?string $timestamp = null;
+
+    // =========================
+    // 🔗 REQUEST ID (🔥 NEW)
+    // =========================
+
+    #[Assert\Length(
+        max: 64,
+        maxMessage: 'request_id must not exceed 64 characters'
+    )]
+    public ?string $requestId = null;
+
+    /**
+     * 🔁 Transformation DTO → Array (pour file queue)
+     */
+    public function toArray(): array
+    {
+        return [
+            'externalId' => $this->externalId,
+            'message' => $this->message,
+            'level' => $this->level,
+            'env' => $this->env,
+            'domain' => $this->domain,
+            'uri' => $this->uri,
+            'method' => $this->method,
+            'ip' => $this->ip,
+            'client' => $this->client,
+            'version' => $this->version,
+            'fingerprint' => $this->fingerprint,
+            'userId' => $this->userId,
+            'httpStatus' => $this->httpStatus,
+            'errorCode' => $this->errorCode,
+            'context' => $this->context,
+            'timestamp' => $this->timestamp,
+
+            // 🔥 propagation
+            'requestId' => $this->requestId,
+        ];
+    }
 }

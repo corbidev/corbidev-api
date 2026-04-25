@@ -1,5 +1,3 @@
-# config/services.yaml
-
 imports:
     - { resource: errors/business_errors.yaml }
 
@@ -15,7 +13,7 @@ services:
         autoconfigure: true
 
     # =========================
-    # 🔥 Auto-loading global
+    # 🔥 AUTOLOAD
     # =========================
     App\:
         resource: '../src/'
@@ -24,15 +22,13 @@ services:
             - '../src/Kernel.php'
 
     # =========================
-    # 🧠 Domain (Logs)
+    # 🧠 DOMAIN (LOGS)
     # =========================
-    App\Api\Logs\Domain\Service\LogValidator: ~
-
     App\Api\Logs\Domain\Repository\LogRepositoryInterface:
         alias: App\Api\Logs\Infrastructure\Repository\DoctrineLogRepository
 
     # =========================
-    # 🧠 Cache Tenant
+    # 🧠 CACHE TENANT
     # =========================
     tenant.cache:
         class: Symfony\Component\Cache\Adapter\FilesystemAdapter
@@ -41,21 +37,21 @@ services:
             $defaultLifetime: 3600
 
     # =========================
-    # 📁 File Queue Logs
+    # 📁 FILE QUEUE LOGS
     # =========================
     App\Api\Logs\Application\Service\FileLogQueueService:
         arguments:
             $dir: '%kernel.project_dir%/var/log_queue'
 
     # =========================
-    # 🧠 Tenant Provider
+    # 🧠 TENANT PROVIDER
     # =========================
     App\Api\Logs\Context\TenantProvider:
         arguments:
             $cache: '@tenant.cache'
 
     # =========================
-    # 🔥 API Exception Listener (CENTRAL)
+    # 🔥 API EXCEPTION LISTENER
     # =========================
     App\Shared\Infrastructure\Exception\ApiExceptionListener:
         arguments:
@@ -65,14 +61,14 @@ services:
             - { name: kernel.event_listener, event: kernel.exception, priority: 100 }
 
     # =========================
-    # 📦 Business Error Registry
+    # 📦 BUSINESS ERROR REGISTRY
     # =========================
     App\Shared\Infrastructure\Error\BusinessErrorRegistry:
         arguments:
             $business_errors: '%business_errors%'
 
     # =========================
-    # 🔥 Swagger OpenAPI Decorator
+    # 🔥 SWAGGER
     # =========================
     App\Shared\Infrastructure\Swagger\OpenApiFactoryDecorator:
         decorates: 'api_platform.openapi.factory'
@@ -81,8 +77,56 @@ services:
             - '@App\Shared\Infrastructure\Error\BusinessErrorRegistry'
 
     # =========================
-    # 📊 HTTP Status Provider
+    # 📊 HTTP STATUS PROVIDER
     # =========================
     App\Http\HttpStatusProvider:
         arguments:
             $filePath: '%kernel.project_dir%/config/http_statuses.fr.json'
+
+    # =====================================================
+    # 🧠 LOGGING CORE
+    # =====================================================
+
+    App\Shared\Logging\Infrastructure\Context\LogContextProvider: ~
+
+    App\Shared\Logging\Infrastructure\Monolog\LogContextProcessor:
+        tags:
+            - { name: monolog.processor }
+
+    # =========================
+    # 🕒 UTC FORMATTER
+    # =========================
+    App\Shared\Logging\Infrastructure\Monolog\UtcJsonFormatter: ~
+
+    # =========================
+    # 🔥 API HANDLER TECHNICAL
+    # =========================
+    App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler.technical:
+        class: App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler
+        arguments:
+            $endpoint: '%env(API_LOGS_ENDPOINT)%'
+            $appVersion: '%env(APP_VERSION)%'
+            $client: 'web-technical'
+            $fallbackLogger: '@monolog.logger.fallback'
+
+    # =========================
+    # 🔥 API HANDLER BUSINESS
+    # =========================
+    App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler.business:
+        class: App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler
+        arguments:
+            $endpoint: '%env(API_LOGS_ENDPOINT)%'
+            $appVersion: '%env(APP_VERSION)%'
+            $client: 'web-business'
+            $fallbackLogger: '@monolog.logger.fallback'
+
+    # =========================
+    # 🔄 FLUSH SUBSCRIBER
+    # =========================
+    App\Shared\Logging\Infrastructure\EventSubscriber\LogFlushSubscriber:
+        arguments:
+            $technicalHandler: '@App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler.technical'
+            $businessHandler: '@App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler.business'
+            $fallbackLogger: '@monolog.logger.fallback'
+        tags:
+            - { name: kernel.event_subscriber }

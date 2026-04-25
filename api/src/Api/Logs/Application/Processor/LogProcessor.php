@@ -4,50 +4,38 @@ namespace App\Api\Logs\Application\Processor;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
-use App\Api\Logs\Application\Handler\CreateLogHandler;
+use App\Api\Logs\Application\DTO\CreateLogEventCollectionDto;
 use App\Api\Logs\Application\DTO\CreateLogEventDto;
-use Doctrine\ORM\EntityManagerInterface;
+use App\Api\Logs\Application\Service\FileLogQueueService;
 
 class LogProcessor implements ProcessorInterface
 {
     public function __construct(
-        private CreateLogHandler $handler,
-        private EntityManagerInterface $em
+        private FileLogQueueService $queue
     ) {}
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): mixed
     {
         // -------------------------
-        // BULK (optionnel)
+        // VALIDATION TYPE
         // -------------------------
-        if (is_array($data)) {
-
-            foreach ($data as $item) {
-                if (!$item instanceof CreateLogEventDto) {
-                    throw new \InvalidArgumentException('Invalid payload in bulk');
-                }
-
-                $this->handler->handle($item);
-            }
-
-            // 🔥 flush unique (perf)
-            $this->em->flush();
-
-            return null; // 🔥 204
-        }
-
-        // -------------------------
-        // SINGLE
-        // -------------------------
-        if (!$data instanceof CreateLogEventDto) {
+        if (!$data instanceof CreateLogEventCollectionDto) {
             throw new \InvalidArgumentException('Invalid payload');
         }
 
-        $this->handler->handle($data);
+        // -------------------------
+        // TRANSFORMATION → ARRAY
+        // -------------------------
+        $payload = array_map(
+            fn (CreateLogEventDto $dto) => $dto->toArray(),
+            $data->logs
+        );
 
-        // 🔥 obligatoire
-        $this->em->flush();
+        // -------------------------
+        // QUEUE
+        // -------------------------
+        $this->queue->enqueue($payload);
 
-        return null; // 🔥 204
+        return null; // 204
     }
 }
