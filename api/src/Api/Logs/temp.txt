@@ -1,0 +1,15 @@
+V src/Api/Logs/Application/Handler/CreateLogHandler.php
+
+
+V src/Api/Logs/Domain/Service/LogValidator.php
+
+
+V src/Api/Logs/Infrastructure/Command/ProcessLogQueueCommand.php
+
+
+V src/Api/Logs/Infrastructure/Command/ProcessLogRetryCommand.php
+
+
+(Optionnel si tu veux tracer les duplicates)
+
+src/Api/Logs/Application/Handler/CreateLogHandler.php (ajout log interne)

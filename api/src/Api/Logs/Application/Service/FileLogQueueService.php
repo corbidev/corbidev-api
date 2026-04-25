@@ -4,6 +4,8 @@ namespace App\Api\Logs\Application\Service;
 
 class FileLogQueueService
 {
+    private const UTC = 'UTC';
+
     public function __construct(
         private string $dir
     ) {}
@@ -33,7 +35,7 @@ class FileLogQueueService
 
         $files = glob($this->dir . '/queue_*.log') ?: [];
 
-        sort($files); // ordre chronologique
+        sort($files); // ordre chronologique naturel (nom = temps)
 
         return $files;
     }
@@ -50,7 +52,7 @@ class FileLogQueueService
         $processingFile = $file . '.processing';
 
         if (!@rename($file, $processingFile)) {
-            return null; // déjà pris par un autre process
+            return null; // déjà pris
         }
 
         return $processingFile;
@@ -73,7 +75,7 @@ class FileLogQueueService
 
         try {
             return json_decode($content, true, 512, JSON_THROW_ON_ERROR);
-        } catch (\Throwable $e) {
+        } catch (\Throwable) {
             throw new \RuntimeException("Invalid JSON in file: $processingFile");
         }
     }
@@ -109,13 +111,20 @@ class FileLogQueueService
     }
 
     // =========================
-    // 🏷️ NOM UNIQUE
+    // 🏷️ NOM UNIQUE (UTC STRICT)
     // =========================
     private function generateFilename(): string
     {
-        $date = (new \DateTime())->format('Y-m-d-His-u');
+        $now = new \DateTimeImmutable('now', new \DateTimeZone(self::UTC));
 
-        return sprintf('%s/queue_%s.log', rtrim($this->dir, '/'), $date);
+        // format compatible avec DateTimeNormalizer::fromFilename()
+        $date = $now->format('Y-m-d_H-i-s_u');
+
+        return sprintf(
+            '%s/queue_%s.log',
+            rtrim($this->dir, '/'),
+            $date
+        );
     }
 
     // =========================
