@@ -3,26 +3,38 @@ monolog:
 
     handlers:
 
+        # =========================
+        # 🔧 TECHNICAL LOGS
+        # =========================
         technical:
             type: stream
             path: "%kernel.logs_dir%/technical.log"
             level: debug
             channels: ["technical"]
-            formatter: monolog.formatter.json
+            formatter: App\Shared\Logging\Infrastructure\Monolog\UtcJsonFormatter
 
+        # =========================
+        # 💼 BUSINESS LOGS
+        # =========================
         business:
             type: stream
             path: "%kernel.logs_dir%/business.log"
             level: info
             channels: ["business"]
-            formatter: monolog.formatter.json
+            formatter: App\Shared\Logging\Infrastructure\Monolog\UtcJsonFormatter
 
+        # =========================
+        # ❌ ERROR GLOBAL
+        # =========================
         error:
             type: stream
             path: "%kernel.logs_dir%/error.log"
             level: error
-            formatter: monolog.formatter.json
+            formatter: App\Shared\Logging\Infrastructure\Monolog\UtcJsonFormatter
 
+        # =========================
+        # 🚀 API LOGS → QUEUE
+        # =========================
         api_logs_technical:
             type: service
             id: App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler.technical
@@ -35,12 +47,19 @@ monolog:
             level: info
             channels: ["business"]
 
+        # =========================
+        # 🛟 FALLBACK
+        # =========================
         fallback:
             type: stream
             path: "%kernel.logs_dir%/api_fallback.log"
             level: error
             channels: ["fallback"]
+            formatter: App\Shared\Logging\Infrastructure\Monolog\UtcJsonFormatter
 
+        # =========================
+        # 🖥️ CONSOLE
+        # =========================
         console:
             type: console
             process_psr_3_messages: false

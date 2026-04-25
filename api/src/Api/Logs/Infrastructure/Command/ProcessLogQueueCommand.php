@@ -5,7 +5,6 @@ namespace App\Api\Logs\Infrastructure\Command;
 use App\Api\Logs\Application\Service\FileLogQueueService;
 use App\Api\Logs\Application\Handler\CreateLogHandler;
 use App\Api\Logs\Application\DTO\CreateLogEventDto;
-use App\Api\Logs\Application\Factory\LogEventFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -18,8 +17,7 @@ class ProcessLogQueueCommand extends Command
     public function __construct(
         private FileLogQueueService $queue,
         private CreateLogHandler $handler,
-        private EntityManagerInterface $em,
-        private LogEventFactory $factory
+        private EntityManagerInterface $em
     ) {
         parent::__construct();
     }
@@ -63,18 +61,15 @@ class ProcessLogQueueCommand extends Command
 
                     try {
                         $dto = $this->hydrateDto($item);
-                        $this->handler->handle($dto);
+
+                        // ✅ handler idempotent (duplicate ignoré ici)
+                        $this->handler->handle($dto, $processingFile);
 
                         $totalLogs++;
                         $i++;
 
-                        // 🔥 batch flush
                         if (($i % 100) === 0) {
-                            $this->em->flush();
-                            $this->em->clear();
-                            $this->factory->reset();
-
-                            $this->log($output, ['FLUSH', 100]);
+                            $this->flush($output);
                         }
 
                     } catch (\Throwable $e) {
@@ -85,8 +80,8 @@ class ProcessLogQueueCommand extends Command
                     }
                 }
 
-                // 🔥 flush final pour ce fichier
-                $this->em->flush();
+                // 🔥 flush final
+                $this->flush($output);
 
                 if ($hasError) {
                     $errorFile = $this->queue->markAsError($processingFile);
@@ -121,8 +116,16 @@ class ProcessLogQueueCommand extends Command
     }
 
     /**
-     * 🔁 Array → DTO
+     * 🔥 Flush simple (plus jamais bloqué)
      */
+    private function flush(OutputInterface $output): void
+    {
+        $this->em->flush();
+        $this->em->clear();
+
+        $this->log($output, ['FLUSH']);
+    }
+
     private function hydrateDto(array $data): CreateLogEventDto
     {
         $dto = new CreateLogEventDto();
@@ -147,17 +150,18 @@ class ProcessLogQueueCommand extends Command
         $dto->errorCode = $data['errorCode'] ?? null;
 
         $dto->context = $data['context'] ?? null;
+        $dto->timestamp = $data['timestamp'] ?? null;
+
+        // 🔥 request_id propagé si présent
+        $dto->requestId = $data['requestId'] ?? null;
 
         return $dto;
     }
 
-    /**
-     * 📊 Logger CSV (| séparateur)
-     */
     private function log(OutputInterface $output, array $fields): void
     {
         $line = array_merge(
-            [(new \DateTime())->format('Y-m-d H:i:s')],
+            [(new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s')],
             $fields
         );
 

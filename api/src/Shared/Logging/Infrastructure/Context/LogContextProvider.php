@@ -7,19 +7,23 @@ use Symfony\Component\HttpFoundation\RequestStack;
 class LogContextProvider
 {
     public function __construct(
-        private RequestStack $requestStack
+        private RequestStack $requestStack,
+        private RequestIdProvider $requestIdProvider
     ) {}
 
     /**
-     * Fournit le contexte HTTP de la requête courante
+     * Fournit le contexte système (HTTP / CLI)
      */
     public function getSystemContext(): array
     {
         $request = $this->requestStack->getCurrentRequest();
 
-        // 🖥️ Cas CLI / cron / worker
+        // =========================
+        // 🖥️ CLI / CRON / WORKER
+        // =========================
         if (!$request) {
             return [
+                'request_id' => $this->requestIdProvider->get(),
                 'domain' => 'cli',
                 'uri' => null,
                 'method' => null,
@@ -27,7 +31,11 @@ class LogContextProvider
             ];
         }
 
+        // =========================
+        // 🌐 HTTP
+        // =========================
         return [
+            'request_id' => $this->requestIdProvider->get(),
             'domain' => $this->resolveHost($request),
             'uri' => $request->getRequestUri(),
             'method' => $request->getMethod(),

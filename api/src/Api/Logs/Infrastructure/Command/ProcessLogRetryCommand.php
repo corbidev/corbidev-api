@@ -5,7 +5,6 @@ namespace App\Api\Logs\Infrastructure\Command;
 use App\Api\Logs\Application\Service\FileLogQueueService;
 use App\Api\Logs\Application\Handler\CreateLogHandler;
 use App\Api\Logs\Application\DTO\CreateLogEventDto;
-use App\Api\Logs\Application\Factory\LogEventFactory;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -24,7 +23,6 @@ class ProcessLogRetryCommand extends Command
         private FileLogQueueService $queue,
         private CreateLogHandler $handler,
         private EntityManagerInterface $em,
-        private LogEventFactory $factory,
         private MailerInterface $mailer,
         #[Autowire('%env(MAIL_FROM)%')]
         private string $mailFrom,
@@ -73,22 +71,25 @@ class ProcessLogRetryCommand extends Command
             try {
                 $batch = $this->queue->read($file);
 
+                if (empty($batch)) {
+                    $this->log($output, ['EMPTY', $file]);
+                    $this->queue->delete($file);
+                    continue;
+                }
+
                 foreach ($batch as $item) {
 
                     try {
                         $dto = $this->hydrateDto($item);
-                        $this->handler->handle($dto);
+
+                        // ✅ handler idempotent (duplicate ignoré)
+                        $this->handler->handle($dto, $file);
 
                         $totalLogs++;
                         $i++;
 
-                        // 🔥 flush batch
                         if (($i % 100) === 0) {
-                            $this->em->flush();
-                            $this->em->clear();
-                            $this->factory->reset();
-
-                            $this->log($output, ['FLUSH', 100]);
+                            $this->flush($output);
                         }
 
                     } catch (\Throwable $e) {
@@ -99,7 +100,8 @@ class ProcessLogRetryCommand extends Command
                     }
                 }
 
-                $this->em->flush();
+                // 🔥 flush final
+                $this->flush($output);
 
                 if ($hasError) {
                     $errorFile = $this->queue->markAsError($file);
@@ -138,6 +140,17 @@ class ProcessLogRetryCommand extends Command
         return Command::SUCCESS;
     }
 
+    /**
+     * 🔥 Flush simple (jamais bloqué)
+     */
+    private function flush(OutputInterface $output): void
+    {
+        $this->em->flush();
+        $this->em->clear();
+
+        $this->log($output, ['FLUSH']);
+    }
+
     private function hydrateDto(array $data): CreateLogEventDto
     {
         $dto = new CreateLogEventDto();
@@ -162,6 +175,10 @@ class ProcessLogRetryCommand extends Command
         $dto->errorCode = $data['errorCode'] ?? null;
 
         $dto->context = $data['context'] ?? null;
+        $dto->timestamp = $data['timestamp'] ?? null;
+
+        // 🔥 propagation request_id
+        $dto->requestId = $data['requestId'] ?? null;
 
         return $dto;
     }
@@ -180,7 +197,7 @@ class ProcessLogRetryCommand extends Command
     private function log(OutputInterface $output, array $fields): void
     {
         $line = array_merge(
-            [(new \DateTime())->format('Y-m-d H:i:s')],
+            [(new \DateTimeImmutable('now', new \DateTimeZone('UTC')))->format('Y-m-d H:i:s')],
             $fields
         );
 

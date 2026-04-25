@@ -5,12 +5,14 @@ namespace App\Shared\Logging\Infrastructure\Monolog;
 use Monolog\LogRecord;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\RequestStack;
+use App\Shared\Logging\Infrastructure\Context\RequestIdProvider;
 
 class LogContextProcessor
 {
     public function __construct(
         private Security $security,
-        private RequestStack $requestStack
+        private RequestStack $requestStack,
+        private RequestIdProvider $requestIdProvider
     ) {}
 
     public function __invoke(LogRecord $record): LogRecord
@@ -18,26 +20,32 @@ class LogContextProcessor
         $request = $this->requestStack->getCurrentRequest();
         $context = $record->context;
 
+        // =========================
+        // 🔗 REQUEST ID (source unique)
+        // =========================
+        if (!isset($context['request_id'])) {
+            $context['request_id'] = $this->requestIdProvider->get();
+        }
+
+        // =========================
         // 🔐 USER
+        // =========================
         $user = $this->security->getUser();
+
         if ($user && method_exists($user, 'getId') && !isset($context['userId'])) {
             $context['userId'] = $user->getId();
         }
 
-        // 🌐 CLIENT dynamique (multi-API / multisite)
+        // =========================
+        // 🌐 CLIENT dynamique
+        // =========================
         if (!isset($context['client'])) {
             $context['client'] = $this->resolveClient($request);
         }
 
-        // 🔗 REQUEST ID
-        if ($request && $request->headers->has('X-Request-Id')) {
-            $context['request_id'] = $request->headers->get('X-Request-Id');
-        } elseif (!isset($context['request_id'])) {
-            // fallback si absent
-            $context['request_id'] = uniqid('req_', true);
-        }
-
-        // 📊 HTTP STATUS (injecté via subscriber ou exception listener)
+        // =========================
+        // 📊 HTTP STATUS
+        // =========================
         if ($request && $request->attributes->has('http_status')) {
             $context['httpStatus'] = $request->attributes->get('http_status');
         }
@@ -57,7 +65,7 @@ class LogContextProcessor
         $path = $request->getPathInfo();
         $host = $request->getHost();
 
-        // 🔥 PRIORITÉ 1 : attribut explicite (le plus propre)
+        // 🔥 PRIORITÉ 1 : attribut explicite
         if ($request->attributes->has('client')) {
             return $request->attributes->get('client');
         }
@@ -75,7 +83,7 @@ class LogContextProcessor
             return 'api';
         }
 
-        // 🔥 PRIORITÉ 3 : basé sur le host (multi-domaine)
+        // 🔥 PRIORITÉ 3 : basé sur le host
         if (str_contains($host, 'auth')) {
             return 'auth-api';
         }
@@ -84,7 +92,6 @@ class LogContextProcessor
             return 'admin-api';
         }
 
-        // 🔥 fallback
         return 'main-api';
     }
 }
