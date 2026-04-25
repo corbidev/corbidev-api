@@ -14,7 +14,7 @@ permissions:
 jobs:
   check-pr-source:
     name: 🔒 Vérification PR homol → main
-    uses: LeZouzouEnWeb/workflows/.github/workflows/check-pr-source.yml@v1.0.9
+    uses: LeZouzouEnWeb/workflows/.github/workflows/check-pr-source.yml@v1.0.10
     permissions:
       contents: read
       issues: write

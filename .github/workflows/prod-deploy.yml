@@ -14,7 +14,7 @@ jobs:
   deploy-prod:
     name: 🚀 Déploiement PROD
     if: github.event.pull_request.merged == true
-    uses: LeZouzouEnWeb/workflows/.github/workflows/deploy.yml@v1.0.9
+    uses: LeZouzouEnWeb/workflows/.github/workflows/deploy.yml@v1.0.10
     permissions:
       contents: write
       pull-requests: write
