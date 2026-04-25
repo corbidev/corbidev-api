@@ -16,7 +16,7 @@ permissions:
 jobs:
   link-project-in-pr:
     name: 🔗 Lier le projet a la PR
-    uses: LeZouzouEnWeb/workflows/.github/workflows/link-project-in-pr.yml@v1.0.9
+    uses: LeZouzouEnWeb/workflows/.github/workflows/link-project-in-pr.yml@v1.0.10
     permissions:
       contents: read
       pull-requests: write

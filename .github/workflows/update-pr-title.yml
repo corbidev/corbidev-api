@@ -15,7 +15,7 @@ permissions:
 jobs:
   update-title-from-branch:
     name: 🔄 Mettre a jour le titre depuis la branche
-    uses: LeZouzouEnWeb/workflows/.github/workflows/update-pr-title.yml@v1.0.9
+    uses: LeZouzouEnWeb/workflows/.github/workflows/update-pr-title.yml@v1.0.10
     permissions:
       contents: read
       pull-requests: write
