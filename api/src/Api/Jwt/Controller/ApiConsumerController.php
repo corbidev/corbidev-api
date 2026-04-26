@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Controller\Admin;
+namespace App\Api\Jwt\Controller;
 
 use App\Api\Jwt\Entity\ApiConsumer;
 use App\Api\Jwt\Repository\ApiConsumerRepository;

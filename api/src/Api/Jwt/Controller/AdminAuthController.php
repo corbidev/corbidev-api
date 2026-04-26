@@ -1,15 +1,20 @@
 <?php
 
-namespace App\Controller\Admin;
+namespace App\Api\Jwt\Controller;
 
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/admin')]
 class AdminAuthController extends AbstractController
 {
+   #[Route('/test-admin')]
+public function test(): Response
+{
+    return new Response('OK');
+}
     #[Route('/login', name: 'admin_login')]
     public function login(Request $request): Response
     {
