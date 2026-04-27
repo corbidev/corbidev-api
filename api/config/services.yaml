@@ -57,6 +57,7 @@ services:
         arguments:
             $mapper: '@App\Shared\Infrastructure\Exception\ExceptionMapper'
             $responseFactory: '@App\Shared\Infrastructure\Http\JsonResponseFactory'
+            $logger: '@monolog.logger.technical'
         tags:
             - { name: kernel.event_listener, event: kernel.exception, priority: 100 }
 

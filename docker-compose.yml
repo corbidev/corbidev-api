@@ -33,7 +33,7 @@ services:
 ###> doctrine/doctrine-bundle ###
     database:
         platform: linux/x86_64
-        container_name: mariadb_${NAME}_${MARIADB_VERSION}
+        container_name: mariadb_${NAME}_${MARIADB_VERSION}_auth
         image: mariadb:${MARIADB_VERSION}
         restart: no
         env_file:

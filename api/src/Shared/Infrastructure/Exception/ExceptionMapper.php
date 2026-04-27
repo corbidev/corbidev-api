@@ -161,7 +161,7 @@ final class ExceptionMapper
     private function mapHttpException(HttpExceptionInterface $exception): ApiError
     {
         return match ($exception->getStatusCode()) {
-            404 => $this->businessError(ErrorCode::RESOURCE_NOT_FOUND, BusinessErrorCode::UNKNOWN_ERROR),
+            404 => new ApiError(ErrorCode::RESOURCE_NOT_FOUND, 'Resource not found'),
             403 => new ApiError(ErrorCode::FORBIDDEN, 'Access denied'),
             401 => new ApiError(ErrorCode::UNAUTHORIZED, 'Unauthorized'),
             405 => new ApiError(ErrorCode::METHOD_NOT_ALLOWED, 'Method not allowed'),

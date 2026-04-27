@@ -8,6 +8,10 @@
         "/^php bin/console lexik:jwt:generate-keypair --skip-if-exists$/": {
             "approve": true,
             "matchCommandLine": true
+        },
+        "/^php bin/console debug:container --env-vars$/": {
+            "approve": true,
+            "matchCommandLine": true
         }
     }
 }
