@@ -9,6 +9,8 @@ use App\Shared\Domain\Error\DomainException;
 use App\Shared\Domain\Error\ErrorCode;
 use App\Shared\Domain\Error\BusinessErrorCode;
 use App\Shared\Infrastructure\Error\BusinessErrorRegistry;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
+use Symfony\Component\Security\Core\Exception\AuthenticationException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\Validator\Exception\ValidationFailedException;
 use ApiPlatform\Validator\Exception\ValidationException as ApiValidationException;
@@ -24,6 +26,20 @@ final class ExceptionMapper
     // =========================
     public function mapWithStatus(\Throwable $exception): array
     {
+        // Conserver le code HTTP réel pour toutes les HttpException
+        if ($exception instanceof HttpExceptionInterface) {
+            return [$this->mapHttpException($exception), $exception->getStatusCode()];
+        }
+
+        // Exceptions de sécurité Symfony (non HttpException)
+        if ($exception instanceof AccessDeniedException) {
+            return [new ApiError(ErrorCode::FORBIDDEN, 'Access denied'), 403];
+        }
+
+        if ($exception instanceof AuthenticationException) {
+            return [new ApiError(ErrorCode::UNAUTHORIZED, 'Unauthorized'), 401];
+        }
+
         $error = $this->map($exception);
         $status = $this->resolveHttpStatus($error);
 
@@ -55,6 +71,17 @@ final class ExceptionMapper
         // =========================
         if ($exception instanceof DomainException) {
             return $this->domainError($exception);
+        }
+
+        // =========================
+        // 🔐 Sécurité Symfony
+        // =========================
+        if ($exception instanceof AccessDeniedException) {
+            return new ApiError(ErrorCode::FORBIDDEN, 'Access denied');
+        }
+
+        if ($exception instanceof AuthenticationException) {
+            return new ApiError(ErrorCode::UNAUTHORIZED, 'Unauthorized');
         }
 
         // =========================
