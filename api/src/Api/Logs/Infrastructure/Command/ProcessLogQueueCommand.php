@@ -122,6 +122,7 @@ class ProcessLogQueueCommand extends Command
     {
         $this->em->flush();
         $this->em->clear();
+        $this->handler->reset();
 
         $this->log($output, ['FLUSH']);
     }

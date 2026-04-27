@@ -49,6 +49,14 @@ final class CreateLogHandler
         }
     }
 
+    /**
+     * Reset in-memory factory caches after EntityManager::clear().
+     */
+    public function reset(): void
+    {
+        $this->factory->reset();
+    }
+
     // =========================
     // 🪵 ERROR LOGGER
     // =========================
