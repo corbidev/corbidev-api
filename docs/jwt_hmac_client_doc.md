@@ -2,7 +2,7 @@
 
 ## 🎯 Objectif
 
-Client PHP prêt à l’emploi pour appeler l’API sécurisée :
+Client PHP prêt à l'emploi pour appeler l'API sécurisée :
 
 https://api.corbisier.fr/api/jwt
 
@@ -33,8 +33,8 @@ Le PATH signé doit être EXACTEMENT :
 
 /api/jwt/...
 
-❌ Ne pas signer l’URL complète  
-❌ Ne pas oublier /api  
+❌ Ne pas signer l'URL complète  
+❌ Ne pas oublier /api
 
 ---
 
@@ -136,6 +136,7 @@ print_r($response);
 ## ⚠️ Points critiques
 
 ### 1. Signature stricte
+
 METHOD
 PATH
 BODY_HASH
@@ -145,17 +146,20 @@ NONCE
 ---
 
 ### 2. Body brut JSON
+
 - Pas de transformation
 - Pas de tri
 
 ---
 
 ### 3. Path exact
+
 /api/jwt/... obligatoire
 
 ---
 
 ### 4. Timestamp
+
 Tolérance : ±5 minutes
 
 ---
@@ -165,4 +169,3 @@ Tolérance : ±5 minutes
 - Signature valide
 - API sécurisée
 - Intégration rapide
-
