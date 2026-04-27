@@ -36,9 +36,27 @@ class ApiConsumerController extends AbstractController
         $this->checkAccess($request);
 
         if ($request->isMethod('POST')) {
+            $identifier = trim((string) $request->request->get('identifier', ''));
+            $password = (string) $request->request->get('password', '');
+            $passwordConfirm = (string) $request->request->get('password_confirm', '');
+
+            if ($identifier === '' || $password === '') {
+                return $this->render('admin/consumer/create.html.twig', [
+                    'error' => 'Identifiant et mot de passe sont requis.',
+                    'identifier' => $identifier,
+                ]);
+            }
+
+            if ($password !== $passwordConfirm) {
+                return $this->render('admin/consumer/create.html.twig', [
+                    'error' => 'Les mots de passe ne correspondent pas.',
+                    'identifier' => $identifier,
+                ]);
+            }
+
             $consumer = new ApiConsumer(
-                $request->request->get('identifier'),
-                password_hash($request->request->get('password'), PASSWORD_BCRYPT)
+                $identifier,
+                password_hash($password, PASSWORD_BCRYPT)
             );
 
             $em->persist($consumer);
@@ -47,7 +65,9 @@ class ApiConsumerController extends AbstractController
             return $this->redirectToRoute('admin_consumers');
         }
 
-        return $this->render('admin/consumer/create.html.twig');
+        return $this->render('admin/consumer/create.html.twig', [
+            'identifier' => '',
+        ]);
     }
 
     #[Route('/{id}/edit', name: 'admin_consumers_edit')]
@@ -56,8 +76,17 @@ class ApiConsumerController extends AbstractController
         $this->checkAccess($request);
 
         if ($request->isMethod('POST')) {
+            $password = (string) $request->request->get('password', '');
+            $passwordConfirm = (string) $request->request->get('password_confirm', '');
 
-            if ($password = $request->request->get('password')) {
+            if (($password !== '' || $passwordConfirm !== '') && $password !== $passwordConfirm) {
+                return $this->render('admin/consumer/edit.html.twig', [
+                    'consumer' => $consumer,
+                    'error' => 'Les mots de passe ne correspondent pas.',
+                ]);
+            }
+
+            if ($password !== '') {
                 $consumer->setPasswordHash(password_hash($password, PASSWORD_BCRYPT));
             }
 
@@ -70,6 +99,7 @@ class ApiConsumerController extends AbstractController
 
         return $this->render('admin/consumer/edit.html.twig', [
             'consumer' => $consumer,
+            'error' => null,
         ]);
     }
 
