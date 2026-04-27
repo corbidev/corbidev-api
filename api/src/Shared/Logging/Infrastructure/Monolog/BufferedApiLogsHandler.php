@@ -28,6 +28,12 @@ class BufferedApiLogsHandler extends AbstractProcessingHandler
     protected function write(LogRecord $record): void
     {
         $log = $this->normalize($record);
+
+        // Anti-récursion : ne pas loguer les appels vers l'endpoint /api/logs lui-même
+        if (isset($log['uri']) && str_contains((string) $log['uri'], '/api/logs')) {
+            return;
+        }
+
         $log = $this->validate($log);
 
         $this->buffer[] = $log;
@@ -44,10 +50,19 @@ class BufferedApiLogsHandler extends AbstractProcessingHandler
         }
 
         try {
-            $this->httpClient->request('POST', $this->endpoint, [
+            $response = $this->httpClient->request('POST', $this->endpoint, [
                 'json' => ['logs' => $this->buffer],
                 'timeout' => 1.0,
             ]);
+
+            $statusCode = $response->getStatusCode();
+
+            if ($statusCode < 200 || $statusCode >= 300) {
+                $this->fallbackLogger->error('API_LOGS error', [
+                    'statusCode' => $statusCode,
+                    'logs' => $this->buffer,
+                ]);
+            }
         } catch (\Throwable $e) {
             $this->fallbackLogger->error('API_LOGS unreachable', [
                 'exception' => $e->getMessage(),
@@ -79,7 +94,7 @@ class BufferedApiLogsHandler extends AbstractProcessingHandler
 
             // 🧾 LOG
             'message' => $record->message,
-            'level' => $record->level->name,
+            'level' => strtoupper($record->level->name),
             'env' => $_SERVER['APP_ENV'] ?? 'dev',
 
             // 📦 META

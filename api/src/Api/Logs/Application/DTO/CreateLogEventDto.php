@@ -42,7 +42,7 @@ final class CreateLogEventDto
     )]
     public ?string $method = null;
 
-    #[Assert\Ip(message: 'ip must be a valid IP address')]
+    #[Assert\Ip(version: 'all', message: 'ip must be a valid IP address')]
     public ?string $ip = null;
 
     public ?string $client = null;

@@ -22,7 +22,7 @@ final class CreateLogEventCollectionDto
     /**
      * @var CreateLogEventDto[]
      */
-    #[Assert\NotEmpty(message: 'logs cannot be empty')]
+    #[Assert\NotBlank(message: 'logs cannot be empty')]
     #[Assert\Valid]
     public array $logs = [];
 }
