@@ -4,7 +4,7 @@
 
 <h3>Admin Login</h3>
 
-{% if error %}
+{% if error is defined and error %}
 <div class="alert alert-danger">{{ error }}</div>
 {% endif %}
 

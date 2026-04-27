@@ -51,6 +51,11 @@ services:
         restart: no
         env_file:
             - .env
+        environment:
+            MYSQL_DATABASE: ${MYSQL_DATABASE_API}
+            MYSQL_USER: ${MYSQL_USER_API}
+            MYSQL_PASSWORD: ${MYSQL_PASSWORD_API}
+            MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD_API}
         volumes:
             - ./${FOLDER_DATASQL_API}:/docker-entrypoint-initdb.d/
             - ./${FOLDER_DATABASE_API}:/var/lib/mysql:rw
@@ -86,9 +91,10 @@ services:
 volumes:
 ###> doctrine/doctrine-bundle ###
     database:
+    database_api:
 ###< doctrine/doctrine-bundle ###
     smtp4dev-data:
-    
+
 networks:
     dev:
         driver: bridge

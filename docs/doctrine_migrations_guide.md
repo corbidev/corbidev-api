@@ -3,26 +3,29 @@
 ## ✅ Cas standard (recommandé)
 
 ### 1. Générer une migration
+
 php bin/console make:migration
 
-✔ Compare Entities ↔ Base de données  
+✔ Compare Entities ↔ Base de données
 ✔ Génère un fichier dans /migrations
 
 ---
 
-### 2. Vérifier l’état
+### 2. Vérifier l'état
+
 php bin/console doctrine:migrations:status
 
 ---
 
 ### 3. Appliquer la migration
+
 php bin/console doctrine:migrations:migrate
 
 ---
 
 ## ⚠️ Cas fréquent (modifications non détectées)
 
-Après modification d’une Entity (ex: LogEvent)
+Après modification d'une Entity (ex: LogEvent)
 
 php bin/console doctrine:schema:validate
 
