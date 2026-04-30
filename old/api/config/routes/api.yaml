@@ -1,0 +1,5 @@
+# routes/api.yaml
+api_admin:
+  resource: '../../src/Api/Jwt/Controller/'
+  type: attribute
+  host: '%api_host%'

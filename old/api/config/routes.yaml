@@ -1,0 +1,20 @@
+# config/routes.yaml
+
+controllers:
+    resource: ../src/Controller/
+    type: attribute
+
+api_platform:
+    resource: routes/api_platform.yaml
+
+# =========================
+# 🔓 AUTH
+# =========================
+auth:
+    resource: routes/auth.yaml
+
+# =========================
+# 📊 API LOGS
+# =========================
+api:
+     resource: routes/api.yaml
