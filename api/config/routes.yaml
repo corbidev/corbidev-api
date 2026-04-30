@@ -16,11 +16,5 @@ auth:
 # =========================
 # 📊 API LOGS
 # =========================
-# api:
-#     resource: routes/api.yaml
-
-api_admin:
-  resource: '../src/Api/Jwt/Controller/'
-  type: attribute
-##  host: '%api_host%'
-
+api:
+     resource: routes/api.yaml

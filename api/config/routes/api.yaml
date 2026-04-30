@@ -2,4 +2,4 @@
 api_admin:
   resource: '../../src/Api/Jwt/Controller/'
   type: attribute
-##  host: '%api_host%'
+  host: '%api_host%'
