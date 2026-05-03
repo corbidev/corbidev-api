@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Tests\Shared\Filesystem;
 
 use PHPUnit\Framework\TestCase;
-use Shared\Infrastructure\Filesystem\LocalSafeFilesystem;
+use App\Shared\Infrastructure\Filesystem\LocalSafeFilesystem;
+use App\Shared\Infrastructure\Logging\Emergency\EmergencyLogger;
+use App\Shared\Infrastructure\Logging\Emergency\PhpErrorLoggerInterface;
 
 final class WriteAtomicTest extends TestCase
 {
@@ -13,21 +15,39 @@ final class WriteAtomicTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->dir = sys_get_temp_dir() . '/fs_test_' . uniqid();
+        $this->dir = sys_get_temp_dir() . '/fs_test_' . uniqid('', true);
         mkdir($this->dir);
     }
 
     protected function tearDown(): void
     {
-        foreach (glob($this->dir . '/*') as $file) {
-            unlink($file);
+        if (!is_dir($this->dir)) {
+            return;
         }
-        rmdir($this->dir);
+
+        foreach (glob($this->dir . '/*') as $file) {
+            if (is_file($file)) {
+                @unlink($file);
+            }
+        }
+
+        @rmdir($this->dir);
+    }
+
+    private function createFilesystem(): LocalSafeFilesystem
+    {
+        return new LocalSafeFilesystem(
+            new EmergencyLogger(
+                new class implements PhpErrorLoggerInterface {
+                    public function log(string $message): void {}
+                }
+            )
+        );
     }
 
     public function test_write_atomic_creates_valid_file_without_tmp(): void
     {
-        $fs = new LocalSafeFilesystem();
+        $fs = $this->createFilesystem();
 
         $path = $this->dir . '/test.queue';
         $content = json_encode(['ok' => true]);
@@ -35,7 +55,7 @@ final class WriteAtomicTest extends TestCase
         $result = $fs->writeAtomic($path, $content);
 
         // ✔ success
-        $this->assertTrue($result->success);
+        $this->assertTrue($result->isSuccess());
 
         // ✔ fichier existe
         $this->assertFileExists($path);

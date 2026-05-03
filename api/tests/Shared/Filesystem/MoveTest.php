@@ -5,23 +5,12 @@ declare(strict_types=1);
 namespace Tests\Shared\Filesystem;
 
 use PHPUnit\Framework\TestCase;
-use Shared\Infrastructure\Filesystem\LocalSafeFilesystem;
+use App\Shared\Infrastructure\Filesystem\LocalSafeFilesystem;
+use App\Shared\Infrastructure\Logging\Emergency\EmergencyLogger;
+use App\Shared\Infrastructure\Logging\Emergency\PhpErrorLoggerInterface;
 
 /**
  * Tests du job MOVE du SafeFilesystem.
- *
- * Objectif :
- * Garantir un déplacement atomique basé uniquement sur rename,
- * sans fallback, pour éviter toute duplication ou incohérence.
- *
- * Pourquoi :
- * MOVE est utilisé comme mécanisme de lock implicite dans la queue :
- * pending → processing
- *
- * Si MOVE est incorrect :
- * - double traitement possible
- * - perte de données
- * - corruption du flux
  */
 final class MoveTest extends TestCase
 {
@@ -30,7 +19,6 @@ final class MoveTest extends TestCase
     protected function setUp(): void
     {
         $this->dir = sys_get_temp_dir() . '/fs_move_' . uniqid('', true);
-
         mkdir($this->dir);
     }
 
@@ -42,16 +30,27 @@ final class MoveTest extends TestCase
 
         foreach (glob($this->dir . '/*') as $file) {
             if (is_file($file)) {
-                unlink($file);
+                @unlink($file);
             }
         }
 
-        rmdir($this->dir);
+        @rmdir($this->dir);
+    }
+
+    private function createFilesystem(): LocalSafeFilesystem
+    {
+        return new LocalSafeFilesystem(
+            new EmergencyLogger(
+                new class implements PhpErrorLoggerInterface {
+                    public function log(string $message): void {}
+                }
+            )
+        );
     }
 
     public function test_move_successfully_moves_file(): void
     {
-        $fs = new LocalSafeFilesystem();
+        $fs = $this->createFilesystem();
 
         $source = $this->dir . '/file.queue';
         $destination = $this->dir . '/moved.queue';
@@ -60,29 +59,27 @@ final class MoveTest extends TestCase
 
         $result = $fs->move($source, $destination);
 
-        $this->assertTrue($result->success);
-
+        $this->assertTrue($result->isSuccess());
         $this->assertFileDoesNotExist($source);
         $this->assertFileExists($destination);
     }
 
     public function test_move_fails_if_source_does_not_exist(): void
     {
-        $fs = new LocalSafeFilesystem();
+        $fs = $this->createFilesystem();
 
         $source = $this->dir . '/missing.queue';
         $destination = $this->dir . '/dest.queue';
 
         $result = $fs->move($source, $destination);
 
-        $this->assertFalse($result->success);
-
+        $this->assertTrue($result->isFailure());
         $this->assertFileDoesNotExist($destination);
     }
 
     public function test_move_does_not_overwrite_existing_file(): void
     {
-        $fs = new LocalSafeFilesystem();
+        $fs = $this->createFilesystem();
 
         $source = $this->dir . '/file.queue';
         $destination = $this->dir . '/dest.queue';
@@ -92,18 +89,14 @@ final class MoveTest extends TestCase
 
         $result = $fs->move($source, $destination);
 
-        $this->assertFalse($result->success);
-
-        // le fichier destination reste intact
+        $this->assertTrue($result->isFailure());
         $this->assertSame('existing', file_get_contents($destination));
-
-        // la source existe toujours
         $this->assertFileExists($source);
     }
 
     public function test_move_is_atomic_like_behavior(): void
     {
-        $fs = new LocalSafeFilesystem();
+        $fs = $this->createFilesystem();
 
         $source = $this->dir . '/file.queue';
         $destination = $this->dir . '/dest.queue';
@@ -112,9 +105,8 @@ final class MoveTest extends TestCase
 
         $result = $fs->move($source, $destination);
 
-        $this->assertTrue($result->success);
+        $this->assertTrue($result->isSuccess());
 
-        // jamais les deux en même temps
         $this->assertFalse(
             file_exists($source) && file_exists($destination)
         );
@@ -122,7 +114,7 @@ final class MoveTest extends TestCase
 
     public function test_move_handles_invalid_destination_path(): void
     {
-        $fs = new LocalSafeFilesystem();
+        $fs = $this->createFilesystem();
 
         $source = $this->dir . '/file.queue';
         $destination = '/invalid/path/dest.queue';
@@ -131,9 +123,7 @@ final class MoveTest extends TestCase
 
         $result = $fs->move($source, $destination);
 
-        $this->assertFalse($result->success);
-
-        // la source reste intacte
+        $this->assertTrue($result->isFailure());
         $this->assertFileExists($source);
     }
 }

@@ -5,17 +5,12 @@ declare(strict_types=1);
 namespace Tests\Shared\Filesystem;
 
 use PHPUnit\Framework\TestCase;
-use Shared\Infrastructure\Filesystem\LocalSafeFilesystem;
+use App\Shared\Infrastructure\Filesystem\LocalSafeFilesystem;
+use App\Shared\Infrastructure\Logging\Emergency\EmergencyLogger;
+use App\Shared\Infrastructure\Logging\Emergency\PhpErrorLoggerInterface;
 
 /**
  * Tests de robustesse MOVE face aux crashs.
- *
- * Objectif :
- * Garantir que même en cas d'interruption brutale,
- * le système reste cohérent.
- *
- * Hypothèse :
- * rename() est atomique → jamais d'état intermédiaire visible.
  */
 final class MoveCrashTest extends TestCase
 {
@@ -35,16 +30,27 @@ final class MoveCrashTest extends TestCase
 
         foreach (glob($this->dir . '/*') as $file) {
             if (is_file($file)) {
-                unlink($file);
+                @unlink($file);
             }
         }
 
-        rmdir($this->dir);
+        @rmdir($this->dir);
+    }
+
+    private function createFilesystem(): LocalSafeFilesystem
+    {
+        return new LocalSafeFilesystem(
+            new EmergencyLogger(
+                new class implements PhpErrorLoggerInterface {
+                    public function log(string $message): void {}
+                }
+            )
+        );
     }
 
     public function test_file_is_never_duplicated(): void
     {
-        $fs = new LocalSafeFilesystem();
+        $fs = $this->createFilesystem();
 
         $source = $this->dir . '/file.queue';
         $destination = $this->dir . '/processing.queue';
@@ -56,13 +62,12 @@ final class MoveCrashTest extends TestCase
         $existsSource = file_exists($source);
         $existsDestination = file_exists($destination);
 
-        // 🔥 invariant critique
         $this->assertFalse($existsSource && $existsDestination);
     }
 
     public function test_file_is_never_lost(): void
     {
-        $fs = new LocalSafeFilesystem();
+        $fs = $this->createFilesystem();
 
         $source = $this->dir . '/file.queue';
         $destination = $this->dir . '/processing.queue';
@@ -74,13 +79,12 @@ final class MoveCrashTest extends TestCase
         $existsSource = file_exists($source);
         $existsDestination = file_exists($destination);
 
-        // 🔥 invariant critique
         $this->assertTrue($existsSource || $existsDestination);
     }
 
     public function test_content_is_preserved_after_move(): void
     {
-        $fs = new LocalSafeFilesystem();
+        $fs = $this->createFilesystem();
 
         $source = $this->dir . '/file.queue';
         $destination = $this->dir . '/processing.queue';
@@ -100,7 +104,7 @@ final class MoveCrashTest extends TestCase
 
     public function test_move_failure_keeps_source_intact(): void
     {
-        $fs = new LocalSafeFilesystem();
+        $fs = $this->createFilesystem();
 
         $source = $this->dir . '/file.queue';
         $destination = '/invalid/path/file.queue';
@@ -109,15 +113,13 @@ final class MoveCrashTest extends TestCase
 
         $result = $fs->move($source, $destination);
 
-        $this->assertFalse($result->success);
-
-        // 🔥 invariant : pas de perte
+        $this->assertTrue($result->isFailure());
         $this->assertFileExists($source);
     }
 
     public function test_move_does_not_create_partial_file(): void
     {
-        $fs = new LocalSafeFilesystem();
+        $fs = $this->createFilesystem();
 
         $source = $this->dir . '/file.queue';
         $destination = $this->dir . '/processing.queue';

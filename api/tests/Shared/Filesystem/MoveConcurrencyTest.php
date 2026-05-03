@@ -5,18 +5,12 @@ declare(strict_types=1);
 namespace Tests\Shared\Filesystem;
 
 use PHPUnit\Framework\TestCase;
-use Shared\Infrastructure\Filesystem\LocalSafeFilesystem;
+use App\Shared\Infrastructure\Filesystem\LocalSafeFilesystem;
+use App\Shared\Infrastructure\Logging\Emergency\EmergencyLogger;
+use App\Shared\Infrastructure\Logging\Emergency\PhpErrorLoggerInterface;
 
 /**
  * Test de concurrence simulée sur MOVE.
- *
- * Objectif :
- * Vérifier que deux processus concurrents ne peuvent pas
- * traiter le même fichier.
- *
- * Important :
- * On simule la concurrence séquentiellement, car rename()
- * est atomique au niveau OS.
  */
 final class MoveConcurrencyTest extends TestCase
 {
@@ -43,27 +37,35 @@ final class MoveConcurrencyTest extends TestCase
         rmdir($this->dir);
     }
 
+    private function createFilesystem(): LocalSafeFilesystem
+    {
+        return new LocalSafeFilesystem(
+            new EmergencyLogger(
+                new class implements PhpErrorLoggerInterface {
+                    public function log(string $message): void {}
+                }
+            )
+        );
+    }
+
     public function test_only_one_process_can_move_file(): void
     {
-        $fsA = new LocalSafeFilesystem();
-        $fsB = new LocalSafeFilesystem();
+        $fsA = $this->createFilesystem();
+        $fsB = $this->createFilesystem();
 
         $source = $this->dir . '/job.queue';
         $destination = $this->dir . '/processing.queue';
 
         file_put_contents($source, 'job');
 
-        // 🧠 simulation : deux crons tentent le move
         $resultA = $fsA->move($source, $destination);
         $resultB = $fsB->move($source, $destination);
 
-        // ✔ un seul doit réussir
         $this->assertTrue(
-            $resultA->success xor $resultB->success,
+            $resultA->isSuccess() xor $resultB->isSuccess(),
             'Only one process should succeed'
         );
 
-        // ✔ le fichier existe exactement une fois
         $existsSource = file_exists($source);
         $existsDestination = file_exists($destination);
 
@@ -73,8 +75,8 @@ final class MoveConcurrencyTest extends TestCase
 
     public function test_second_process_fails_cleanly(): void
     {
-        $fsA = new LocalSafeFilesystem();
-        $fsB = new LocalSafeFilesystem();
+        $fsA = $this->createFilesystem();
+        $fsB = $this->createFilesystem();
 
         $source = $this->dir . '/job.queue';
         $destination = $this->dir . '/processing.queue';
@@ -84,11 +86,14 @@ final class MoveConcurrencyTest extends TestCase
         $resultA = $fsA->move($source, $destination);
         $resultB = $fsB->move($source, $destination);
 
-        // ✔ un succès, un échec
-        $this->assertTrue($resultA->success || $resultB->success);
-        $this->assertTrue(!$resultA->success || !$resultB->success);
+        $this->assertTrue(
+            $resultA->isSuccess() || $resultB->isSuccess()
+        );
 
-        // ✔ aucun état incohérent
+        $this->assertTrue(
+            $resultA->isFailure() || $resultB->isFailure()
+        );
+
         $this->assertFalse(
             file_exists($source) && file_exists($destination)
         );
@@ -96,8 +101,8 @@ final class MoveConcurrencyTest extends TestCase
 
     public function test_no_duplicate_processing_possible(): void
     {
-        $fsA = new LocalSafeFilesystem();
-        $fsB = new LocalSafeFilesystem();
+        $fsA = $this->createFilesystem();
+        $fsB = $this->createFilesystem();
 
         $source = $this->dir . '/job.queue';
         $destination = $this->dir . '/processing.queue';
@@ -107,7 +112,6 @@ final class MoveConcurrencyTest extends TestCase
         $fsA->move($source, $destination);
         $fsB->move($source, $destination);
 
-        // ✔ il n'existe qu'un seul fichier exploitable
         $files = glob($this->dir . '/*.queue');
 
         $this->assertCount(1, $files);

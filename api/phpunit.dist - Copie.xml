@@ -4,24 +4,17 @@
 <phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
          colors="true"
-
-         bootstrap="tests/bootstrap.php"
-         cacheDirectory=".phpunit.cache"
-
          failOnDeprecation="true"
          failOnNotice="true"
          failOnWarning="true"
+         bootstrap="tests/bootstrap.php"
+         cacheDirectory=".phpunit.cache"
 >
     <php>
-        <!-- 🔥 affichage complet -->
-        <ini name="display_errors" value="1"/>
-        <ini name="error_reporting" value="E_ALL"/>
-
-        <!-- 🔥 force PHP à ne rien cacher -->
-        <ini name="log_errors" value="0"/>
-
-        <server name="APP_ENV" value="test" force="true"/>
-        <server name="SHELL_VERBOSITY" value="-1"/>
+        <ini name="display_errors" value="1" />
+        <ini name="error_reporting" value="-1" />
+        <server name="APP_ENV" value="test" force="true" />
+        <server name="SHELL_VERBOSITY" value="-1" />
     </php>
 
     <testsuites>
@@ -30,11 +23,10 @@
         </testsuite>
     </testsuites>
 
-    <source
-        ignoreSuppressionOfDeprecations="true"
-        ignoreIndirectDeprecations="true"
-        restrictNotices="true"
-        restrictWarnings="true"
+    <source ignoreSuppressionOfDeprecations="true"
+            ignoreIndirectDeprecations="true"
+            restrictNotices="true"
+            restrictWarnings="true"
     >
         <include>
             <directory>src</directory>
@@ -47,4 +39,6 @@
         </deprecationTrigger>
     </source>
 
+    <extensions>
+    </extensions>
 </phpunit>

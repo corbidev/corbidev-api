@@ -5,21 +5,19 @@ declare(strict_types=1);
 namespace Tests\Shared\Filesystem;
 
 use PHPUnit\Framework\TestCase;
-use Shared\Infrastructure\Filesystem\LocalSafeFilesystem;
+use App\Shared\Infrastructure\Filesystem\LocalSafeFilesystem;
+use App\Shared\Infrastructure\Logging\Emergency\EmergencyLogger;
+use App\Shared\Infrastructure\Logging\Emergency\PhpErrorLoggerInterface;
 
 /**
  * Tests du job LIST du SafeFilesystem.
  *
  * Objectif :
- * Garantir que seuls les fichiers exploitables (.queue) sont retournés,
- * sans jamais exposer de fichiers temporaires ou invalides.
+ * Vérifier que la méthode list() retourne correctement
+ * les fichiers selon un pattern donné.
  *
  * Pourquoi :
- * LIST est une brique critique pour le système de queue.
- * Une mauvaise implémentation peut entraîner :
- * - lecture de fichiers corrompus
- * - race conditions
- * - comportements non déterministes
+ * Le filtrage métier (ex: .queue) ne doit PAS être fait ici.
  */
 final class ListTest extends TestCase
 {
@@ -28,7 +26,6 @@ final class ListTest extends TestCase
     protected function setUp(): void
     {
         $this->dir = sys_get_temp_dir() . '/fs_list_' . uniqid('', true);
-
         mkdir($this->dir);
     }
 
@@ -40,23 +37,33 @@ final class ListTest extends TestCase
 
         foreach (glob($this->dir . '/*') as $file) {
             if (is_file($file)) {
-                unlink($file);
+                @unlink($file);
             }
         }
 
         rmdir($this->dir);
     }
 
-    public function test_returns_only_queue_files(): void
+    private function createFilesystem(): LocalSafeFilesystem
     {
-        $fs = new LocalSafeFilesystem();
+        return new LocalSafeFilesystem(
+            new EmergencyLogger(
+                new class implements PhpErrorLoggerInterface {
+                    public function log(string $message): void {}
+                }
+            )
+        );
+    }
+
+    public function test_returns_files_matching_pattern(): void
+    {
+        $fs = $this->createFilesystem();
 
         file_put_contents($this->dir . '/a.queue', 'ok');
         file_put_contents($this->dir . '/b.queue', 'ok');
         file_put_contents($this->dir . '/c.tmp', 'tmp');
-        file_put_contents($this->dir . '/d.txt', 'txt');
 
-        $files = $fs->list($this->dir);
+        $files = $fs->list($this->dir, '*.queue');
 
         $this->assertCount(2, $files);
 
@@ -65,21 +72,21 @@ final class ListTest extends TestCase
         }
     }
 
-    public function test_ignores_tmp_files(): void
+    public function test_ignores_non_matching_pattern(): void
     {
-        $fs = new LocalSafeFilesystem();
+        $fs = $this->createFilesystem();
 
         file_put_contents($this->dir . '/a.queue.tmp', 'tmp');
         file_put_contents($this->dir . '/b.tmp', 'tmp');
 
-        $files = $fs->list($this->dir);
+        $files = $fs->list($this->dir, '*.queue');
 
         $this->assertEmpty($files);
     }
 
     public function test_returns_empty_array_if_directory_is_empty(): void
     {
-        $fs = new LocalSafeFilesystem();
+        $fs = $this->createFilesystem();
 
         $files = $fs->list($this->dir);
 
@@ -89,7 +96,7 @@ final class ListTest extends TestCase
 
     public function test_returns_empty_array_if_directory_does_not_exist(): void
     {
-        $fs = new LocalSafeFilesystem();
+        $fs = $this->createFilesystem();
 
         $files = $fs->list('/path/does/not/exist');
 
@@ -99,7 +106,7 @@ final class ListTest extends TestCase
 
     public function test_returns_full_paths(): void
     {
-        $fs = new LocalSafeFilesystem();
+        $fs = $this->createFilesystem();
 
         $file = $this->dir . '/a.queue';
         file_put_contents($file, 'ok');
@@ -111,7 +118,7 @@ final class ListTest extends TestCase
 
     public function test_returns_sorted_files(): void
     {
-        $fs = new LocalSafeFilesystem();
+        $fs = $this->createFilesystem();
 
         file_put_contents($this->dir . '/b.queue', 'ok');
         file_put_contents($this->dir . '/a.queue', 'ok');

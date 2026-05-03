@@ -2,7 +2,10 @@
 
 declare(strict_types=1);
 
-namespace Shared\Infrastructure\Filesystem;
+namespace App\Shared\Infrastructure\Filesystem;
+
+use App\Shared\Infrastructure\Logging\Emergency\EmergencyLogger;
+use App\Shared\Infrastructure\Logging\Emergency\NativePhpErrorLogger;
 
 /**
  * Implémentation locale d'un filesystem sécurisé.
@@ -13,66 +16,39 @@ namespace Shared\Infrastructure\Filesystem;
  *
  * Contraintes :
  * - aucune exception ne doit remonter
- * - toutes les erreurs sont loggées
- * - comportement toujours prédictible
- *
- * Cette classe est utilisée comme brique technique de bas niveau
- * (ex: queue logging), sans contenir aucune logique métier.
+ * - aucune logique métier
+ * - aucun système de logging interne
+ * - fallback uniquement via EmergencyLogger
  */
-final class LocalSafeFilesystem
+final class LocalSafeFilesystem implements FilesystemInterface
 {
-    /**
-     * Chemin du fichier de log technique.
-     *
-     * Pourquoi :
-     * Centraliser toutes les erreurs filesystem sans impacter
-     * le système appelant.
-     */
-    private string $logPath;
+    private EmergencyLogger $emergencyLogger;
 
-    public function __construct(?string $logPath = null)
+    public function __construct(?EmergencyLogger $emergencyLogger = null)
     {
-        $this->logPath = $logPath
-            ?? __DIR__ . '/../../../../var/log/errorSystem/filesystem.log';
+        $this->emergencyLogger = $emergencyLogger
+            ?? new EmergencyLogger(new NativePhpErrorLogger());
     }
 
-    /**
-     * Écrit un fichier de manière atomique.
-     *
-     * Pourquoi :
-     * Garantir qu'un fichier n'est jamais visible dans un état partiel,
-     * même en cas de crash (JSON invalide, écriture interrompue).
-     *
-     * Stratégie :
-     * - écriture dans un fichier temporaire unique (.tmp)
-     * - vérification complète de l'écriture
-     * - renommage atomique vers la destination finale
-     *
-     * @param string $targetPath
-     * @param string $content
-     *
-     * @return FilesystemResult
-     */
     public function writeAtomic(string $targetPath, string $content): FilesystemResult
     {
         $tmpPath = $targetPath . '.' . uniqid('', true) . '.tmp';
 
         try {
-            // 1. Écriture dans le fichier temporaire
             $bytes = @file_put_contents($tmpPath, $content, LOCK_EX);
 
             if ($bytes === false) {
                 return $this->fail("write failed: $tmpPath");
             }
 
-            // 2. Vérification anti écriture partielle
             if ($bytes !== strlen($content)) {
                 @unlink($tmpPath);
                 return $this->fail("partial write detected: $tmpPath");
             }
 
-            // 3. Rename atomique
-            if (!@rename($tmpPath, $targetPath)) {
+            $result = @rename($tmpPath, $targetPath);
+
+            if ($result === false) {
                 @unlink($tmpPath);
                 return $this->fail("rename failed: $tmpPath → $targetPath");
             }
@@ -81,47 +57,32 @@ final class LocalSafeFilesystem
 
         } catch (\Throwable $e) {
             @unlink($tmpPath);
-
             return $this->fail($e->getMessage());
         }
     }
 
-    /**
-     * Liste les fichiers exploitables d'un dossier.
-     *
-     * Pourquoi :
-     * Permettre aux composants (ex: queue) de récupérer uniquement
-     * des fichiers stables (.queue), sans exposer les fichiers temporaires.
-     *
-     * Règles :
-     * - uniquement les fichiers .queue
-     * - chemins complets
-     * - tri déterministe
-     * - aucune exception
-     *
-     * @param string $directory
-     *
-     * @return array<string>
-     */
-    public function list(string $directory): array
+    public function list(string $directory, string $pattern = '*'): array
     {
         try {
-            if (!is_dir($directory)) {
+            if (!@is_dir($directory)) {
                 return [];
             }
 
-            $pattern = rtrim($directory, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . '*.queue';
+            $fullPattern = rtrim($directory, DIRECTORY_SEPARATOR)
+                . DIRECTORY_SEPARATOR
+                . $pattern;
 
-            $files = glob($pattern);
+            $files = @glob($fullPattern);
 
-            if ($files === false) {
-                $this->logError("glob failed: $directory");
+            if (!is_array($files)) {
+                $this->logError("glob failed: $directory with pattern $pattern");
                 return [];
             }
 
-            $files = array_filter($files, static function ($file) {
-                return is_file($file);
-            });
+            $files = array_filter(
+                $files,
+                static fn(string $file): bool => @is_file($file)
+            );
 
             sort($files, SORT_STRING);
 
@@ -129,131 +90,73 @@ final class LocalSafeFilesystem
 
         } catch (\Throwable $e) {
             $this->logError($e->getMessage());
-
             return [];
         }
     }
 
-    /**
-     * Centralise la gestion des erreurs.
-     *
-     * Pourquoi :
-     * Uniformiser le comportement d'échec et garantir
-     * un logging systématique.
-     */
+    public function move(string $source, string $destination): FilesystemResult
+    {
+        try {
+            if (!@is_file($source)) {
+                return $this->fail("move failed: source not found: $source");
+            }
+
+            if (@file_exists($destination)) {
+                return $this->fail("move failed: destination exists: $destination");
+            }
+
+            // 🔥 FIX CRITIQUE : vérifier le dossier cible AVANT rename
+            $destinationDir = dirname($destination);
+
+            if (!@is_dir($destinationDir)) {
+                return $this->fail("move failed: destination directory not found: $destinationDir");
+            }
+
+            $result = @rename($source, $destination);
+
+            if ($result === false) {
+                return $this->fail("move failed: rename error: $source → $destination");
+            }
+
+            return FilesystemResult::success();
+
+        } catch (\Throwable $e) {
+            return $this->fail($e->getMessage());
+        }
+    }
+
+    public function delete(string $path): FilesystemResult
+    {
+        try {
+            if (!@file_exists($path)) {
+                return FilesystemResult::success();
+            }
+
+            if (!@is_file($path)) {
+                return $this->fail("delete failed: not a file: $path");
+            }
+
+            $result = @unlink($path);
+
+            if ($result === false) {
+                return $this->fail("delete failed: unlink error: $path");
+            }
+
+            return FilesystemResult::success();
+
+        } catch (\Throwable $e) {
+            return $this->fail($e->getMessage());
+        }
+    }
+
     private function fail(string $message): FilesystemResult
     {
         $this->logError($message);
-
         return FilesystemResult::failure($message);
     }
 
-    /**
-     * Écrit une erreur technique dans le log filesystem.
-     *
-     * Pourquoi :
-     * Permettre le diagnostic en production sans exposer
-     * d'erreurs au système métier.
-     */
     private function logError(string $message): void
     {
-        $line = sprintf(
-            "[%s] %s\n",
-            date('Y-m-d H:i:s'),
-            $message
-        );
-
-        $dir = dirname($this->logPath);
-
-        if (!is_dir($dir)) {
-            @mkdir($dir, 0777, true);
-        }
-
-        @file_put_contents(
-            $this->logPath,
-            $line,
-            FILE_APPEND
-        );
+        $this->emergencyLogger->log('[Filesystem] ' . $message);
     }
-/**
- * Déplace un fichier de manière atomique via rename.
- *
- * Pourquoi :
- * Fournir un mécanisme de lock implicite (ex: queue),
- * garantissant qu'un fichier n'est traité qu'une seule fois.
- *
- * Contraintes :
- * - rename uniquement (aucun fallback copy)
- * - aucun overwrite autorisé
- * - aucune exception remontée
- *
- * @param string $source
- * @param string $destination
- *
- * @return FilesystemResult
- */
-public function move(string $source, string $destination): FilesystemResult
-{
-    try {
-        // ✔ source doit exister
-        if (!is_file($source)) {
-            return $this->fail("move failed: source not found: $source");
-        }
-
-        // ✔ destination ne doit pas exister
-        if (file_exists($destination)) {
-            return $this->fail("move failed: destination exists: $destination");
-        }
-
-        // ✔ tentative de rename atomique
-        if (!@rename($source, $destination)) {
-            return $this->fail("move failed: rename error: $source → $destination");
-        }
-
-        return FilesystemResult::success();
-
-    } catch (\Throwable $e) {
-        return $this->fail($e->getMessage());
-    }
-}
-/**
- * Supprime un fichier de manière sûre et idempotente.
- *
- * Pourquoi :
- * Garantir qu'un fichier peut être supprimé sans risque,
- * même s'il est déjà absent ou en état inattendu.
- *
- * Règles :
- * - idempotent : fichier absent = succès
- * - refuse de supprimer autre chose qu'un fichier
- * - aucune exception remontée
- *
- * @param string $path
- *
- * @return FilesystemResult
- */
-public function delete(string $path): FilesystemResult
-{
-    try {
-        // ✔ déjà absent → OK (idempotence)
-        if (!file_exists($path)) {
-            return FilesystemResult::success();
-        }
-
-        // ✔ sécurité : refuser dossiers / autres
-        if (!is_file($path)) {
-            return $this->fail("delete failed: not a file: $path");
-        }
-
-        // ✔ suppression
-        if (!@unlink($path)) {
-            return $this->fail("delete failed: unlink error: $path");
-        }
-
-        return FilesystemResult::success();
-
-    } catch (\Throwable $e) {
-        return $this->fail($e->getMessage());
-    }
-}
 }

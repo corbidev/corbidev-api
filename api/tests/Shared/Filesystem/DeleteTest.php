@@ -5,7 +5,10 @@ declare(strict_types=1);
 namespace Tests\Shared\Filesystem;
 
 use PHPUnit\Framework\TestCase;
-use Shared\Infrastructure\Filesystem\LocalSafeFilesystem;
+use App\Shared\Infrastructure\Filesystem\LocalSafeFilesystem;
+use App\Shared\Infrastructure\Filesystem\FilesystemResult;
+use App\Shared\Infrastructure\Logging\Emergency\EmergencyLogger;
+use App\Shared\Infrastructure\Logging\Emergency\PhpErrorLoggerInterface;
 
 /**
  * Tests du job DELETE du SafeFilesystem.
@@ -29,72 +32,100 @@ final class DeleteTest extends TestCase
 
     protected function tearDown(): void
     {
-        if (!is_dir($this->dir)) {
+        $this->removeDirectory($this->dir);
+    }
+
+    /**
+     * Suppression récursive robuste du dossier de test.
+     *
+     * Pourquoi :
+     * Éviter tout état résiduel (fichiers ou dossiers)
+     * pouvant casser les tests suivants.
+     */
+    private function removeDirectory(string $dir): void
+    {
+        if (!is_dir($dir)) {
             return;
         }
 
-        foreach (glob($this->dir . '/*') as $file) {
-            if (is_file($file)) {
-                @unlink($file);
+        foreach (scandir($dir) as $item) {
+            if ($item === '.' || $item === '..') {
+                continue;
+            }
+
+            $path = $dir . DIRECTORY_SEPARATOR . $item;
+
+            if (is_dir($path)) {
+                $this->removeDirectory($path);
+            } else {
+                @unlink($path);
             }
         }
 
-        rmdir($this->dir);
+        @rmdir($dir);
+    }
+
+    private function createFilesystem(): LocalSafeFilesystem
+    {
+        return new LocalSafeFilesystem(
+            new EmergencyLogger(
+                new class implements PhpErrorLoggerInterface {
+                    public function log(string $message): void {}
+                }
+            )
+        );
     }
 
     public function test_delete_existing_file(): void
     {
-        $fs = new LocalSafeFilesystem();
+        $fs = $this->createFilesystem();
 
         $file = $this->dir . '/file.queue';
         file_put_contents($file, 'data');
 
         $result = $fs->delete($file);
 
-        $this->assertTrue($result->success);
+        $this->assertTrue($result->isSuccess());
         $this->assertFileDoesNotExist($file);
     }
 
     public function test_delete_is_idempotent(): void
     {
-        $fs = new LocalSafeFilesystem();
+        $fs = $this->createFilesystem();
 
         $file = $this->dir . '/missing.queue';
 
         $result = $fs->delete($file);
 
-        $this->assertTrue($result->success);
+        $this->assertTrue($result->isSuccess());
         $this->assertFileDoesNotExist($file);
     }
 
     public function test_delete_fails_on_directory(): void
     {
-        $fs = new LocalSafeFilesystem();
+        $fs = $this->createFilesystem();
 
         $dir = $this->dir . '/subdir';
         mkdir($dir);
 
         $result = $fs->delete($dir);
 
-        $this->assertFalse($result->success);
-
+        $this->assertTrue($result->isFailure());
         $this->assertDirectoryExists($dir);
     }
 
     public function test_delete_handles_permission_error(): void
     {
-        $fs = new LocalSafeFilesystem();
+        $fs = $this->createFilesystem();
 
         $file = $this->dir . '/protected.queue';
         file_put_contents($file, 'data');
 
-        // rendre le fichier non supprimable (simulation simple)
         chmod($file, 0444);
 
         $result = $fs->delete($file);
 
-        // selon OS, peut réussir ou échouer → on vérifie robustesse
-        if ($result->success) {
+        if ($result->isSuccess()) {
             $this->assertFileDoesNotExist($file);
         } else {
             $this->assertFileExists($file);
@@ -103,13 +134,10 @@ final class DeleteTest extends TestCase
 
     public function test_delete_never_throws_exception(): void
     {
-        $fs = new LocalSafeFilesystem();
+        $fs = $this->createFilesystem();
 
         $result = $fs->delete('/invalid/path/file.queue');
 
-        $this->assertInstanceOf(
-            \Shared\Infrastructure\Filesystem\FilesystemResult::class,
-            $result
-        );
+        $this->assertInstanceOf(FilesystemResult::class, $result);
     }
 }

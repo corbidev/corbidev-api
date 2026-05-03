@@ -5,42 +5,54 @@ declare(strict_types=1);
 namespace Tests\Shared\Filesystem;
 
 use PHPUnit\Framework\TestCase;
+use App\Shared\Infrastructure\Filesystem\LocalSafeFilesystem;
 
+/**
+ * Test de robustesse face à un crash pendant writeAtomic.
+ *
+ * Objectif :
+ * Vérifier qu’un fichier temporaire ne fuit jamais dans le système.
+ */
 final class WriteAtomicCrashTest extends TestCase
 {
     private string $dir;
 
     protected function setUp(): void
     {
-        $this->dir = sys_get_temp_dir() . '/fs_crash_' . uniqid();
+        $this->dir = sys_get_temp_dir() . '/fs_crash_' . uniqid('', true);
         mkdir($this->dir);
     }
 
     protected function tearDown(): void
     {
         foreach (glob($this->dir . '/*') as $file) {
-            unlink($file);
+            if (is_file($file)) {
+                @unlink($file);
+            }
         }
-        rmdir($this->dir);
+
+        @rmdir($this->dir);
     }
 
-    public function test_tmp_file_left_does_not_create_invalid_queue_file(): void
+    public function test_tmp_file_left_is_not_exposed_by_list(): void
     {
+        $fs = new LocalSafeFilesystem();
+
         $finalPath = $this->dir . '/test.queue';
         $tmpPath = $finalPath . '.crash.tmp';
 
-        // 🔥 Simulation crash : write tmp sans rename
+        // 🔥 simulation crash : fichier temporaire présent
         file_put_contents($tmpPath, '{"invalid": ');
 
-        // ✔ aucun fichier final ne doit exister
+        // ✔ aucun fichier final
         $this->assertFileDoesNotExist($finalPath);
 
         // ✔ tmp existe
         $this->assertFileExists($tmpPath);
 
-        // ✔ LIST ne doit pas retourner ce fichier
-        $files = glob($this->dir . '/*.queue');
+        // ✔ LIST ne doit PAS retourner ce fichier
+        $files = $fs->list($this->dir, '*.queue');
 
-        $this->assertEmpty($files);
+        $this->assertSame([], $files); // 🔥 assertion stricte
     }
 }

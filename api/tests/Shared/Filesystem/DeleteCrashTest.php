@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Tests\Shared\Filesystem;
 
 use PHPUnit\Framework\TestCase;
-use Shared\Infrastructure\Filesystem\LocalSafeFilesystem;
-use Shared\Infrastructure\Filesystem\FilesystemResult;
+use App\Shared\Infrastructure\Filesystem\LocalSafeFilesystem;
+use App\Shared\Infrastructure\Filesystem\FilesystemResult;
+use App\Shared\Infrastructure\Logging\Emergency\EmergencyLogger;
+use App\Shared\Infrastructure\Logging\Emergency\PhpErrorLoggerInterface;
 
 /**
  * Tests de robustesse DELETE face aux crashs.
@@ -44,9 +46,20 @@ final class DeleteCrashTest extends TestCase
         rmdir($this->dir);
     }
 
+    private function createFilesystem(): LocalSafeFilesystem
+    {
+        return new LocalSafeFilesystem(
+            new EmergencyLogger(
+                new class implements PhpErrorLoggerInterface {
+                    public function log(string $message): void {}
+                }
+            )
+        );
+    }
+
     public function test_file_is_either_deleted_or_present(): void
     {
-        $fs = new LocalSafeFilesystem();
+        $fs = $this->createFilesystem();
 
         $file = $this->dir . '/file.queue';
         file_put_contents($file, 'data');
@@ -55,13 +68,12 @@ final class DeleteCrashTest extends TestCase
 
         $exists = file_exists($file);
 
-        // 🔥 invariant : état binaire uniquement (présent ou absent)
         $this->assertIsBool($exists);
     }
 
     public function test_no_partial_state_possible(): void
     {
-        $fs = new LocalSafeFilesystem();
+        $fs = $this->createFilesystem();
 
         $file = $this->dir . '/file.queue';
         file_put_contents($file, 'data');
@@ -69,17 +81,15 @@ final class DeleteCrashTest extends TestCase
         $fs->delete($file);
 
         if (file_exists($file)) {
-            // ✔ intact
             $this->assertSame('data', file_get_contents($file));
         } else {
-            // ✔ supprimé proprement
             $this->assertFileDoesNotExist($file);
         }
     }
 
     public function test_delete_failure_does_not_corrupt_file(): void
     {
-        $fs = new LocalSafeFilesystem();
+        $fs = $this->createFilesystem();
 
         $file = $this->dir . '/protected.queue';
         file_put_contents($file, 'data');
@@ -88,19 +98,17 @@ final class DeleteCrashTest extends TestCase
 
         $result = $fs->delete($file);
 
-        if ($result->success === false) {
-            // ✔ fichier intact
+        if ($result->isFailure()) {
             $this->assertFileExists($file);
             $this->assertSame('data', file_get_contents($file));
         } else {
-            // ✔ supprimé
             $this->assertFileDoesNotExist($file);
         }
     }
 
     public function test_no_side_effect_on_other_files(): void
     {
-        $fs = new LocalSafeFilesystem();
+        $fs = $this->createFilesystem();
 
         $fileA = $this->dir . '/a.queue';
         $fileB = $this->dir . '/b.queue';
@@ -110,21 +118,17 @@ final class DeleteCrashTest extends TestCase
 
         $fs->delete($fileA);
 
-        // ✔ aucun effet de bord
         $this->assertFileExists($fileB);
         $this->assertSame('B', file_get_contents($fileB));
     }
 
     public function test_delete_on_invalid_path_is_safe(): void
     {
-        $fs = new LocalSafeFilesystem();
+        $fs = $this->createFilesystem();
 
         $result = $fs->delete('/invalid/path/file.queue');
 
-        // ✔ idempotence → succès
-        $this->assertTrue($result->success);
-
-        // ✔ type correct
+        $this->assertTrue($result->isSuccess());
         $this->assertInstanceOf(FilesystemResult::class, $result);
     }
 }
