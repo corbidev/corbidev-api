@@ -1,0 +1,170 @@
+imports:
+    - { resource: errors/business_errors.yaml }
+
+parameters:
+    auth_host: '%env(AUTH_HOST)%'
+    api_host: '%env(API_HOST)%'
+    cron_token: '%env(CRON_TOKEN)%'
+
+services:
+
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    # =========================
+    # 🔥 AUTOLOAD
+    # =========================
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Kernel.php'
+
+    # =========================
+    # 🧠 DOMAIN (LOGS)
+    # =========================
+    App\Api\Logs\Domain\Repository\LogRepositoryInterface:
+        alias: App\Api\Logs\Infrastructure\Repository\DoctrineLogRepository
+
+    # =========================
+    # 🧠 CACHE TENANT
+    # =========================
+    tenant.cache:
+        class: Symfony\Component\Cache\Adapter\FilesystemAdapter
+        arguments:
+            $namespace: 'tenant'
+            $defaultLifetime: 3600
+
+    # =========================
+    # 📁 FILE QUEUE LOGS
+    # =========================
+    App\Api\Logs\Application\Service\FileLogQueueService:
+        arguments:
+            $dir: '%kernel.project_dir%/var/log_queue'
+
+    # =========================
+    # 🧠 TENANT PROVIDER
+    # =========================
+    App\Api\Logs\Context\TenantProvider:
+        arguments:
+            $cache: '@tenant.cache'
+
+    # =========================
+    # 🔥 API EXCEPTION LISTENER
+    # =========================
+    App\Shared\Infrastructure\Exception\ApiExceptionListener:
+        arguments:
+            $mapper: '@App\Shared\Infrastructure\Exception\ExceptionMapper'
+            $responseFactory: '@App\Shared\Infrastructure\Http\JsonResponseFactory'
+            $logger: '@monolog.logger.technical'
+        tags:
+            - { name: kernel.event_listener, event: kernel.exception, priority: 100 }
+
+    # =========================
+    # 📦 BUSINESS ERROR REGISTRY
+    # =========================
+    App\Shared\Infrastructure\Error\BusinessErrorRegistry:
+        arguments:
+            $business_errors: '%business_errors%'
+
+    # =========================
+    # 🔥 SWAGGER
+    # =========================
+    App\Shared\Infrastructure\Swagger\OpenApiFactoryDecorator:
+        decorates: 'api_platform.openapi.factory'
+        arguments:
+            - '@App\Shared\Infrastructure\Swagger\OpenApiFactoryDecorator.inner'
+            - '@App\Shared\Infrastructure\Error\BusinessErrorRegistry'
+
+    # =========================
+    # 📊 HTTP STATUS PROVIDER
+    # =========================
+    App\Http\HttpStatusProvider:
+        arguments:
+            $filePath: '%kernel.project_dir%/config/http_statuses.fr.json'
+
+    # =====================================================
+    # 🧠 LOGGING CORE
+    # =====================================================
+
+    App\Shared\Logging\Infrastructure\Context\LogContextProvider: ~
+
+    App\Shared\Logging\Infrastructure\Monolog\LogContextProcessor:
+        tags:
+            - { name: monolog.processor }
+
+    App\Shared\Logging\Infrastructure\Monolog\UtcJsonFormatter: ~
+
+    # =========================
+    # 🔥 API HANDLER TECHNICAL
+    # =========================
+    App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler.technical:
+        class: App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler
+        arguments:
+            $endpoint: '%env(API_LOGS_ENDPOINT)%'
+            $appVersion: '%env(APP_VERSION)%'
+            $client: 'web-technical'
+            $fallbackLogger: '@monolog.logger.fallback'
+
+    # =========================
+    # 🔥 API HANDLER BUSINESS
+    # =========================
+    App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler.business:
+        class: App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler
+        arguments:
+            $endpoint: '%env(API_LOGS_ENDPOINT)%'
+            $appVersion: '%env(APP_VERSION)%'
+            $client: 'web-business'
+            $fallbackLogger: '@monolog.logger.fallback'
+
+    # =========================
+    # 🔄 FLUSH SUBSCRIBER
+    # =========================
+    App\Shared\Logging\Infrastructure\EventSubscriber\LogFlushSubscriber:
+        arguments:
+            $technicalHandler: '@App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler.technical'
+            $businessHandler: '@App\Shared\Logging\Infrastructure\Monolog\BufferedApiLogsHandler.business'
+            $fallbackLogger: '@monolog.logger.fallback'
+        tags:
+            - { name: kernel.event_subscriber }
+
+    # =====================================================
+    # 🔐 JWT / HMAC SECURITY
+    # =====================================================
+
+    # 🔒 SecretCrypto
+    App\Api\Jwt\Security\SecretCrypto:
+        arguments:
+            $appSecret: '%kernel.secret%'
+
+    # 🌐 Subscriber HTTP
+    App\Api\Jwt\Http\HmacRequestSubscriber:
+        tags:
+            - { name: kernel.event_subscriber }
+
+    # 🧠 Validator
+    App\Api\Jwt\Security\HmacValidator: ~
+
+    # 🧠 Canonical builder
+    App\Api\Jwt\Security\CanonicalRequestBuilder: ~
+
+    # 🚨 Attack detector (alerting)
+    App\Api\Jwt\Security\HmacAttackDetector:
+        arguments:
+            $cache: '@tenant.cache'
+            $logger: '@monolog.logger.technical'
+
+    # 🧠 Handlers
+
+    # 🔥 HMAC principal (business logs + alerting)
+    App\Api\Jwt\Handler\ValidateHmacHandler:
+        arguments:
+            $logger: '@monolog.logger.business'
+
+    App\Api\Jwt\Handler\CreateClientHandler: ~
+
+    App\Api\Jwt\Handler\RotateSecretHandler: ~
+
+    # 🏭 Factory
+    App\Api\Jwt\Factory\ApiClientFactory: ~
