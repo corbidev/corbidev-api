@@ -1,4 +1,5 @@
 git
+.git
 .github
 .rsync-ignore
 .gitignore
@@ -24,3 +25,5 @@ api/tests
 api/config/jwt
 api/postman
 api/public/bundles/
+
+old/
