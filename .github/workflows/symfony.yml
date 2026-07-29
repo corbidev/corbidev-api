@@ -7,9 +7,9 @@ name: Symfony
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ develop, homol, main ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ develop, homol, main ]
 
 permissions:
   contents: read
@@ -17,6 +17,9 @@ permissions:
 jobs:
   symfony-tests:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
     steps:
     #  To automatically get bug fixes and new Php versions for shivammathur/setup-php,
     # change this to (see https://github.com/shivammathur/setup-php#bookmark-versioning):
@@ -31,8 +34,8 @@ jobs:
       id: composer-cache
       uses: actions/cache@v3
       with:
-        path: vendor
-        key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+        path: api/vendor
+        key: ${{ runner.os }}-php-${{ hashFiles('api/composer.lock') }}
         restore-keys: |
           ${{ runner.os }}-php-
     - name: Install Dependencies
