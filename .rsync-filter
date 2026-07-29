@@ -4,46 +4,40 @@
 
 - /.git/
 - /.github/
-- /.gitignore
-- /.rsync-filter
+- **/.gitignore
+- **/.rsync-*
 - /.vscode/
 
 ##############################################################################
 # ENV
 ##############################################################################
 
-+ /.env.example
-+ /.env.*.example
++ **/.env.example
++ **/.env.*.example
 
-- /.env
-- /.env.*
+- **/.env
+- **/.env.*
 
-+ /api/.env.example
-+ /api/.env.*.example
-
-- /api/.env
-- /api/.env.*
 
 ##############################################################################
 # DOSSIERS
 ##############################################################################
 
-- /vendor/
-- /database/
-- /old/
 
-- /api/vendor/
-- /api/var/
-- /api/tests/
-- /api/postman/
-- /api/config/jwt/
-- /api/public/bundles/
+- **/database/
+- **/old/
+- **/vendor/
+- **/var/
+- **/tests/
+- **/postman/
+- **/config/jwt/
+- **/public/bundles/
 
 ##############################################################################
 # DOCKER
 ##############################################################################
 
-- /docker-compose.*
+- **/docker-compose.*
 
 ##############################################################################
 # PARCOURIR TOUS LES DOSSIERS
