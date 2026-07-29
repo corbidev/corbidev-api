@@ -2,6 +2,7 @@ git
 .git
 .github
 .rsync-ignore
+.rsync-include
 .gitignore
 .vscode
 
