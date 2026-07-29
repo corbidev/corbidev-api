@@ -2,7 +2,7 @@
 
 🔐 Symfony Auth API
 
-API d’authentification sécurisée basée sur Symfony 8.
+API d'authentification sécurisée basée sur Symfony 8.
 
 Objectifs :
 
@@ -17,8 +17,8 @@ Objectifs :
 
 1. Création du projet
 
-composer create-project symfony/skeleton auth-api
-cd auth-api
+composer create-project symfony/skeleton api
+cd api
 
 ---
 
@@ -174,7 +174,7 @@ Toujours utiliser :
 
 ⚠️ Règle projet
 
-SI ce n’est pas testé → ça n’existe pas
+SI ce n'est pas testé → ça n'existe pas
 
 ---
 
@@ -185,7 +185,7 @@ SI ce n’est pas testé → ça n’existe pas
 ✔ Rôle
 
 - KernelTestCase
-- Tests d’intégration
+- Tests d'intégration
 
 ---
 
