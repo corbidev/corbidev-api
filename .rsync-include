@@ -1,3 +1,5 @@
 .env.*.example
-.env.docker-compose.example
+.env.example
+api/.env.*.example
+api/.env.example
 */
