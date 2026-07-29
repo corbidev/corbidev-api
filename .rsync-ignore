@@ -1,12 +1,11 @@
 git
+.git
 .github
 .rsync-ignore
+.rsync-include
 .gitignore
 .vscode
 
-# ✅ Exceptions EN PREMIER, avant les règles d'exclusion générales
-!.env.*.example
-!.env.docker-compose.example
 
 # Ensuite les exclusions générales
 .env
@@ -24,3 +23,5 @@ api/tests
 api/config/jwt
 api/postman
 api/public/bundles/
+
+old/

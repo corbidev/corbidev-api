@@ -1,0 +1,5 @@
+.env.*.example
+.env.example
+api/.env.*.example
+api/.env.example
+*/
