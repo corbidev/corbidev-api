@@ -5,9 +5,6 @@ git
 .gitignore
 .vscode
 
-# ✅ Exceptions EN PREMIER, avant les règles d'exclusion générales
-!.env.*.example
-!.env.docker-compose.example
 
 # Ensuite les exclusions générales
 .env
