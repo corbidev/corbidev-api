@@ -7,6 +7,9 @@
 - **/.gitignore
 - **/.rsync-*
 - /.vscode/
+- **/.editorconfig
+- **/docker-compose.*
+- **/*.docker-compose.*
 
 ##############################################################################
 # ENV
