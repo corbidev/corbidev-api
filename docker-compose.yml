@@ -33,7 +33,7 @@ services:
 ###> doctrine/doctrine-bundle ###
     database:
         platform: linux/x86_64
-        container_name: mariadb_${NAME}_${MARIADB_VERSION}
+        container_name: mariadb_${NAME}_${MARIADB_VERSION}_auth
         image: mariadb:${MARIADB_VERSION}
         restart: no
         env_file:
@@ -51,6 +51,11 @@ services:
         restart: no
         env_file:
             - .env
+        environment:
+            MYSQL_DATABASE: ${MYSQL_DATABASE_API}
+            MYSQL_USER: ${MYSQL_USER_API}
+            MYSQL_PASSWORD: ${MYSQL_PASSWORD_API}
+            MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD_API}
         volumes:
             - ./${FOLDER_DATASQL_API}:/docker-entrypoint-initdb.d/
             - ./${FOLDER_DATABASE_API}:/var/lib/mysql:rw
@@ -62,10 +67,34 @@ services:
 # ##< BASE DE DONNÉES // ADMINER ET mariadb
 
 
+##> SMTP4DEV - Serveur SMTP de développement
+    smtp4dev:
+        image: rnwood/smtp4dev:latest
+        container_name: smtp4dev
+        restart: no
+        ports:
+            - ${SMTP4DEV_LOCALHOST_WEB_PORT}:${SMTP4DEV_DOCKER_WEB_PORT}    # Interface Web
+            - ${SMTP4DEV_LOCALHOST_SMTP_PORT}:${SMTP4DEV_DOCKER_SMTP_PORT}  # SMTP
+        environment:
+            - SMTP4DEV_HOSTNAME=smtp4dev.local
+            - SMTP4DEV_SMTP_USERNAME=dev
+            - SMTP4DEV_SMTP_PASSWORD=dev
+            - SMTP4DEV_SMTP_TLS_MODE=None
+            - SMTP4DEV_STORAGE_RETENTION_DAYS=7
+            - SMTP4DEV_RELAY_MODE=Off
+        volumes:
+            - smtp4dev-data:/smtp4dev
+        networks:
+            - dev
+# ##< SMTP4DEV - Serveur SMTP de développement
+
 volumes:
 ###> doctrine/doctrine-bundle ###
     database:
+    database_api:
 ###< doctrine/doctrine-bundle ###
+    smtp4dev-data:
+
 networks:
     dev:
         driver: bridge
