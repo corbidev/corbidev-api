@@ -8,6 +8,7 @@ use App\Auth\Entity\ApiClient;
 use App\Auth\Entity\ApiClientSecret;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Bridge\Doctrine\Types\UuidType;
 
 /**
  * Repository permettant d'accéder aux secrets des clients API.
@@ -30,8 +31,8 @@ class ApiClientSecretRepository extends ServiceEntityRepository
     public function findByApiClient(ApiClient $apiClient): array
     {
         return $this->createQueryBuilder('secret')
-            ->andWhere('secret.apiClient = :apiClient')
-            ->setParameter('apiClient', $apiClient)
+            ->andWhere('IDENTITY(secret.apiClient) = :apiClientId')
+            ->setParameter('apiClientId', $apiClient->getId(), UuidType::NAME)
             ->orderBy('secret.createdAt', 'DESC')
             ->getQuery()
             ->getResult();
@@ -45,10 +46,10 @@ class ApiClientSecretRepository extends ServiceEntityRepository
     public function findValidByApiClient(ApiClient $apiClient): array
     {
         return $this->createQueryBuilder('secret')
-            ->andWhere('secret.apiClient = :apiClient')
+            ->andWhere('IDENTITY(secret.apiClient) = :apiClientId')
             ->andWhere('secret.revokedAt IS NULL')
             ->andWhere('(secret.expiresAt IS NULL OR secret.expiresAt > :now)')
-            ->setParameter('apiClient', $apiClient)
+            ->setParameter('apiClientId', $apiClient->getId(), UuidType::NAME)
             ->setParameter('now', new \DateTimeImmutable())
             ->orderBy('secret.createdAt', 'DESC')
             ->getQuery()
@@ -61,10 +62,10 @@ class ApiClientSecretRepository extends ServiceEntityRepository
     public function findLatestValidByApiClient(ApiClient $apiClient): ?ApiClientSecret
     {
         return $this->createQueryBuilder('secret')
-            ->andWhere('secret.apiClient = :apiClient')
+            ->andWhere('IDENTITY(secret.apiClient) = :apiClientId')
             ->andWhere('secret.revokedAt IS NULL')
             ->andWhere('(secret.expiresAt IS NULL OR secret.expiresAt > :now)')
-            ->setParameter('apiClient', $apiClient)
+            ->setParameter('apiClientId', $apiClient->getId(), UuidType::NAME)
             ->setParameter('now', new \DateTimeImmutable())
             ->orderBy('secret.createdAt', 'DESC')
             ->setMaxResults(1)

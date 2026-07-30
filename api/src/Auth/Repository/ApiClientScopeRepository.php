@@ -8,6 +8,7 @@ use App\Auth\Entity\ApiClient;
 use App\Auth\Entity\ApiClientScope;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Bridge\Doctrine\Types\UuidType;
 
 /**
  * Repository permettant d'accéder aux scopes des clients API.
@@ -30,8 +31,8 @@ class ApiClientScopeRepository extends ServiceEntityRepository
     public function findByApiClient(ApiClient $apiClient): array
     {
         return $this->createQueryBuilder('scope')
-            ->andWhere('scope.apiClient = :apiClient')
-            ->setParameter('apiClient', $apiClient)
+            ->andWhere('IDENTITY(scope.apiClient) = :apiClientId')
+            ->setParameter('apiClientId', $apiClient->getId(), UuidType::NAME)
             ->orderBy('scope.scope', 'ASC')
             ->getQuery()
             ->getResult();
@@ -44,10 +45,13 @@ class ApiClientScopeRepository extends ServiceEntityRepository
         ApiClient $apiClient,
         string $scope,
     ): ?ApiClientScope {
-        return $this->findOneBy([
-            'apiClient' => $apiClient,
-            'scope' => $scope,
-        ]);
+        return $this->createQueryBuilder('scope')
+            ->andWhere('IDENTITY(scope.apiClient) = :apiClientId')
+            ->andWhere('scope.scope = :scope')
+            ->setParameter('apiClientId', $apiClient->getId(), UuidType::NAME)
+            ->setParameter('scope', $scope)
+            ->getQuery()
+            ->getOneOrNullResult();
     }
 
     /**
@@ -57,11 +61,11 @@ class ApiClientScopeRepository extends ServiceEntityRepository
         ApiClient $apiClient,
         string $scope,
     ): bool {
-        return $this->createQueryBuilder('scope')
+        return (int) $this->createQueryBuilder('scope')
             ->select('COUNT(scope.id)')
-            ->andWhere('scope.apiClient = :apiClient')
+            ->andWhere('IDENTITY(scope.apiClient) = :apiClientId')
             ->andWhere('scope.scope = :scope')
-            ->setParameter('apiClient', $apiClient)
+            ->setParameter('apiClientId', $apiClient->getId(), UuidType::NAME)
             ->setParameter('scope', $scope)
             ->getQuery()
             ->getSingleScalarResult() > 0;

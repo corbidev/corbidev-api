@@ -8,6 +8,7 @@ use App\Auth\Entity\ApiClient;
 use App\Auth\Entity\ApiRequestLog;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Bridge\Doctrine\Types\UuidType;
 
 /**
  * Repository permettant d'accéder aux journaux de requêtes API.
@@ -32,8 +33,8 @@ class ApiRequestLogRepository extends ServiceEntityRepository
         int $limit = 100,
     ): array {
         return $this->createQueryBuilder('requestLog')
-            ->andWhere('requestLog.apiClient = :apiClient')
-            ->setParameter('apiClient', $apiClient)
+            ->andWhere('IDENTITY(requestLog.apiClient) = :apiClientId')
+            ->setParameter('apiClientId', $apiClient->getId(), UuidType::NAME)
             ->orderBy('requestLog.createdAt', 'DESC')
             ->setMaxResults($limit)
             ->getQuery()
