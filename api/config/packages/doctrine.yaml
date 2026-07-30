@@ -1,25 +1,40 @@
 doctrine:
     dbal:
-        url: '%env(resolve:DATABASE_URL)%'
+        default_connection: default
 
-        # IMPORTANT: You MUST configure your server version,
-        # either here or in the DATABASE_URL env var (see .env file)
-        #server_version: '16'
+        connections:
+            default:
+                url: '%env(resolve:DATABASE_URL)%'
 
-        profiling_collect_backtrace: '%kernel.debug%'
+            auth:
+                url: '%env(resolve:DATABASE_AUTH_URL)%'
+
+
     orm:
-        validate_xml_mapping: true
-        naming_strategy: doctrine.orm.naming_strategy.underscore
-        identity_generation_preferences:
-            Doctrine\DBAL\Platforms\PostgreSQLPlatform: identity
-        auto_mapping: true
-        mappings:
-            App:
-                type: attribute
-                is_bundle: false
-                dir: '%kernel.project_dir%/src/Entity'
-                prefix: 'App\Entity'
-                alias: App
+        default_entity_manager: default
+
+        entity_managers:
+            default:
+                connection: default
+                naming_strategy: doctrine.orm.naming_strategy.underscore
+                mappings:
+                    App:
+                        type: attribute
+                        is_bundle: false
+                        dir: '%kernel.project_dir%/src/Entity'
+                        prefix: 'App\Entity'
+                        alias: App
+
+            auth:
+                connection: auth
+                naming_strategy: doctrine.orm.naming_strategy.underscore
+                mappings:
+                    Auth:
+                        type: attribute
+                        is_bundle: false
+                        dir: '%kernel.project_dir%/src/Auth/Entity'
+                        prefix: 'App\Auth\Entity'
+                        alias: Auth
 
 when@test:
     doctrine:
@@ -30,17 +45,28 @@ when@test:
 when@prod:
     doctrine:
         orm:
-            query_cache_driver:
-                type: pool
-                pool: doctrine.system_cache_pool
-            result_cache_driver:
-                type: pool
-                pool: doctrine.result_cache_pool
+            entity_managers:
+                default:
+                    query_cache_driver:
+                        type: pool
+                        pool: doctrine.system_cache_pool
+                    result_cache_driver:
+                        type: pool
+                        pool: doctrine.result_cache_pool
+
+                auth:
+                    query_cache_driver:
+                        type: pool
+                        pool: doctrine.system_cache_pool
+                    result_cache_driver:
+                        type: pool
+                        pool: doctrine.result_cache_pool
 
     framework:
         cache:
             pools:
                 doctrine.result_cache_pool:
                     adapter: cache.app
+
                 doctrine.system_cache_pool:
                     adapter: cache.system
