@@ -23,6 +23,7 @@ api/config/jwt/*.pem
 deploy
 database/*
 !database/sql/
+!database/sql_*/
 api_*/
 temp/
 *.zip

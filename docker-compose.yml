@@ -4,7 +4,7 @@ services:
         platform: linux/x86_64
         container_name: adminer_${NAME}_${ADMINER_VERSION}
         image: adminer:${ADMINER_VERSION}
-        restart: no
+        restart: always
         ports:
             - ${ADMINER_LOCALHOST_PORT}:${ADMINER_DOCKER_PORT}
         env_file:
@@ -35,7 +35,7 @@ services:
         platform: linux/x86_64
         container_name: mariadb_${NAME}_${MARIADB_VERSION}
         image: mariadb:${MARIADB_VERSION}
-        restart: no
+        restart: always
         env_file:
             - .env
         volumes:
@@ -48,7 +48,7 @@ services:
         platform: linux/x86_64
         container_name: mariadb_${NAME}_${MARIADB_VERSION}_auth
         image: mariadb:${MARIADB_VERSION}
-        restart: no
+        restart: always
         env_file:
             - .env
         environment:
@@ -71,7 +71,7 @@ services:
     smtp4dev:
         image: rnwood/smtp4dev:latest
         container_name: smtp4dev
-        restart: no
+        restart: always
         ports:
             - ${SMTP4DEV_LOCALHOST_WEB_PORT}:${SMTP4DEV_DOCKER_WEB_PORT}    # Interface Web
             - ${SMTP4DEV_LOCALHOST_SMTP_PORT}:${SMTP4DEV_DOCKER_SMTP_PORT}  # SMTP
