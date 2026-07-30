@@ -33,7 +33,7 @@ services:
 ###> doctrine/doctrine-bundle ###
     database:
         platform: linux/x86_64
-        container_name: mariadb_${NAME}_${MARIADB_VERSION}_auth
+        container_name: mariadb_${NAME}_${MARIADB_VERSION}
         image: mariadb:${MARIADB_VERSION}
         restart: no
         env_file:
@@ -44,23 +44,23 @@ services:
         ports:
             - ${SQL_LOCALHOST_PORT}:${SQL_DOCKER_PORT}
 
-    database_api:
+    database_auth:
         platform: linux/x86_64
-        container_name: mariadb_${NAME}_${MARIADB_VERSION}_api
+        container_name: mariadb_${NAME}_${MARIADB_VERSION}_auth
         image: mariadb:${MARIADB_VERSION}
         restart: no
         env_file:
             - .env
         environment:
-            MYSQL_DATABASE: ${MYSQL_DATABASE_API}
-            MYSQL_USER: ${MYSQL_USER_API}
-            MYSQL_PASSWORD: ${MYSQL_PASSWORD_API}
-            MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD_API}
+            MYSQL_DATABASE: ${MYSQL_DATABASE_AUTH}
+            MYSQL_USER: ${MYSQL_USER_AUTH}
+            MYSQL_PASSWORD: ${MYSQL_PASSWORD_AUTH}
+            MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD_AUTH}
         volumes:
-            - ./${FOLDER_DATASQL_API}:/docker-entrypoint-initdb.d/
-            - ./${FOLDER_DATABASE_API}:/var/lib/mysql:rw
+            - ./${FOLDER_DATASQL_AUTH}:/docker-entrypoint-initdb.d/
+            - ./${FOLDER_DATABASE_AUTH}:/var/lib/mysql:rw
         ports:
-            - ${SQL_LOCALHOST_PORT_API}:${SQL_DOCKER_PORT_API}
+            - ${SQL_LOCALHOST_PORT_AUTH}:${SQL_DOCKER_PORT_AUTH}
 
 
 ###< doctrine/doctrine-bundle ###
@@ -91,7 +91,7 @@ services:
 volumes:
 ###> doctrine/doctrine-bundle ###
     database:
-    database_api:
+    database_auth:
 ###< doctrine/doctrine-bundle ###
     smtp4dev-data:
 
